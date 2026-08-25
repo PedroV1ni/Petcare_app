@@ -15,6 +15,35 @@ class NewsScreen extends StatelessWidget {
     'jul', 'ago', 'set', 'out', 'nov', 'dez',
   ];
 
+  /// Evita que o topo da lista fique so com materia sem resumo.
+  ///
+  /// O Firestore devolve por data, e ai as materias editoriais - as unicas com
+  /// resumo e capa - afundam, porque aviso de prefeitura sai todo dia e guia
+  /// de cuidado nao. A ordem cronologica continua dentro de cada grupo, mas
+  /// nao se permite mais de dois itens seguidos sem resumo.
+  List<News> _intercalar(List<News> lista) {
+    bool temResumo(News n) =>
+        n.description.isNotEmpty && n.description != n.author;
+
+    final ricas = lista.where(temResumo).toList();
+    final secas = lista.where((n) => !temResumo(n)).toList();
+    final saida = <News>[];
+    var seguidasSemResumo = 0;
+
+    while (ricas.isNotEmpty || secas.isNotEmpty) {
+      final pegarRica =
+          ricas.isNotEmpty && (seguidasSemResumo >= 2 || secas.isEmpty);
+      if (pegarRica) {
+        saida.add(ricas.removeAt(0));
+        seguidasSemResumo = 0;
+      } else {
+        saida.add(secas.removeAt(0));
+        seguidasSemResumo++;
+      }
+    }
+    return saida;
+  }
+
   /// Data curta ao lado do veiculo. "há 2 dias" diz mais que "23 de ago."
   /// quando a noticia acabou de sair, que e o caso da maioria da lista.
   String _quando(DateTime d) {
@@ -36,7 +65,7 @@ class NewsScreen extends StatelessWidget {
         if (!snap.hasData) {
           return const AppLoadingWidget(message: 'Carregando notícias...');
         }
-        final lista = snap.data!;
+        final lista = _intercalar(snap.data!);
         if (lista.isEmpty) {
           return const AppEmptyWidget(
             message: 'Nenhuma notícia por enquanto.',

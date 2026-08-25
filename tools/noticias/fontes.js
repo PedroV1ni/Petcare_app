@@ -14,13 +14,9 @@ export const FEEDS = [
     // anuncio de marca nova na loja. O filtro de exclusao cuida disso.
     tipoDeTitulo: 'direto',
   },
-  {
-    nome: 'Petlove',
-    url: 'https://www.petlove.com.br/dicas/feed',
-    // Melhor fonte que achei: publica quase todo dia, escreve para o dono do
-    // animal e o proprio RSS ja traz resumo de verdade.
-    tipoDeTitulo: 'direto',
-  },
+  // Petlove ficou de fora: o conteudo era o melhor que achei, mas o site
+  // responde 403 para o IP dos runners do GitHub. Funciona rodando local e
+  // falha no CI, entao manter so geraria uma fonte que nunca entrega nada.
   {
     nome: 'CFMV',
     url: 'https://www.cfmv.gov.br/feed/',
