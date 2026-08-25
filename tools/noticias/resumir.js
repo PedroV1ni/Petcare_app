@@ -36,6 +36,13 @@ const PREFERENCIA = [
 /** Modelos que existem mas nao servem para resumir texto. */
 const NAO_SERVE = /whisper|tts|guard|vision|embed|distil/i;
 
+/**
+ * Modelo de raciocinio fica por ultimo. Ele gasta tokens pensando antes de
+ * responder, o que so encarece e alonga uma tarefa simples como resumir - e
+ * ainda obriga a limpar o bloco <think> da resposta.
+ */
+const RACIOCINIO = /qwen3|reasoning|-r1|thinking|deepseek/i;
+
 let modeloEscolhido = null;
 
 /**
@@ -51,15 +58,18 @@ export async function escolherModelo(cliente) {
     .map((m) => m.id)
     .filter((id) => !NAO_SERVE.test(id));
 
+  const simples = disponiveis.filter((id) => !RACIOCINIO.test(id));
   modeloEscolhido =
     PREFERENCIA.find((p) => disponiveis.includes(p)) ||
-    disponiveis.find((id) => /llama|mixtral|gemma|qwen/i.test(id)) ||
+    simples.find((id) => /llama|mixtral|gemma|qwen|gpt|kimi/i.test(id)) ||
+    simples[0] ||
     disponiveis[0];
 
   if (!modeloEscolhido) {
     throw new Error(`nenhum modelo utilizavel na conta. Disponiveis: ${disponiveis.join(', ') || '(nenhum)'}`);
   }
-  console.log(`  modelo: ${modeloEscolhido} (de ${disponiveis.length} disponiveis)`);
+  console.log(`  modelo: ${modeloEscolhido}`);
+  console.log(`  disponiveis na conta: ${disponiveis.join(', ')}`);
   return modeloEscolhido;
 }
 
@@ -141,8 +151,10 @@ export async function resumir(cliente, titulo, texto) {
 
   const resposta = await cliente.chat.completions.create({
     model: await escolherModelo(cliente),
-    // Resumo curto: teto baixo evita resposta divagando e economiza cota.
-    max_tokens: 400,
+    // Folgado de proposito. A primeira execucao caiu num modelo de raciocinio
+    // (qwen3-32b), que gasta tokens pensando antes de responder: com teto de
+    // 400 o orcamento acabava no raciocinio e a resposta vinha vazia.
+    max_tokens: 1500,
     // Temperatura baixa porque a tarefa e fidelidade ao texto, nao criacao.
     temperature: 0.3,
     messages: [
@@ -154,7 +166,14 @@ export async function resumir(cliente, titulo, texto) {
     ],
   });
 
-  const saida = (resposta.choices?.[0]?.message?.content || '').trim();
+  const bruto = resposta.choices?.[0]?.message?.content || '';
+
+  // Modelo de raciocinio devolve <think>...</think> antes do texto final.
+  const saida = bruto
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/<think>[\s\S]*$/i, '')
+    .trim();
+
   if (!saida || saida.includes('SEM_RESUMO')) return null;
 
   // Modelo aberto as vezes devolve o resumo entre aspas mesmo instruido a nao
