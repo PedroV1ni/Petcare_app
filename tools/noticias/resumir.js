@@ -24,6 +24,8 @@ export function iaDisponivel() {
  * e torcer, o script pergunta a API o que existe.
  */
 const PREFERENCIA = [
+  'openai/gpt-oss-120b',
+  'openai/gpt-oss-20b',
   'llama-3.3-70b-versatile',
   'llama-3.1-70b-versatile',
   'llama3-70b-8192',
@@ -34,7 +36,7 @@ const PREFERENCIA = [
 ];
 
 /** Modelos que existem mas nao servem para resumir texto. */
-const NAO_SERVE = /whisper|tts|guard|vision|embed|distil/i;
+const NAO_SERVE = /whisper|tts|guard|vision|embed|distil|orpheus|allam/i;
 
 /**
  * Modelo de raciocinio fica por ultimo. Ele gasta tokens pensando antes de
@@ -152,22 +154,51 @@ const MINIMO_DE_CARACTERES = 400;
  * Resume uma materia. Devolve null quando nao da para resumir com fidelidade -
  * o chamador entao mantem o resumo que ja tinha.
  */
+const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Chama a IA respeitando o limite por minuto da camada gratuita.
+ *
+ * Estourar o limite e esperado aqui, nao excecao: o job resume varias materias
+ * seguidas e o teto e de 8000 tokens por minuto. A propria Groq responde
+ * quanto falta esperar ("try again in 3.65s"), entao vale obedecer e repetir
+ * em vez de descartar a materia - foi assim que uma se perdeu na execucao #6.
+ */
+async function chamarComRetentativa(cliente, corpo, tentativas = 3) {
+  for (let tentativa = 1; ; tentativa++) {
+    try {
+      return await cliente.chat.completions.create(corpo);
+    } catch (erro) {
+      const excedeuLimite = erro?.status === 429;
+      if (!excedeuLimite || tentativa >= tentativas) throw erro;
+
+      const sugerido = /try again in ([\d.]+)s/i.exec(erro.message || '');
+      // Um segundo a mais que o sugerido: o limite e por janela de minuto e
+      // acordar no limite exato costuma esbarrar de novo.
+      const espera = sugerido ? Number(sugerido[1]) * 1000 + 1000 : 5000 * tentativa;
+      console.log(`  limite por minuto atingido, aguardando ${Math.round(espera / 1000)}s...`);
+      await esperar(espera);
+    }
+  }
+}
+
 export async function resumir(cliente, titulo, texto) {
   if (!texto || texto.length < MINIMO_DE_CARACTERES) return null;
 
-  const resposta = await cliente.chat.completions.create({
+  const resposta = await chamarComRetentativa(cliente, {
     model: await escolherModelo(cliente),
-    // Folgado de proposito. A primeira execucao caiu num modelo de raciocinio
-    // (qwen3-32b), que gasta tokens pensando antes de responder: com teto de
-    // 400 o orcamento acabava no raciocinio e a resposta vinha vazia.
-    max_tokens: 1500,
+    // O resumo tem 400 caracteres, mas o teto precisa de folga porque alguns
+    // modelos gastam tokens raciocinando antes de responder - com teto justo a
+    // resposta volta vazia. Folga sem exagero: na camada gratuita o teto
+    // pedido conta no limite por minuto, e pedir demais derruba a proxima.
+    max_tokens: 700,
     // Temperatura baixa porque a tarefa e fidelidade ao texto, nao criacao.
     temperature: 0.3,
     messages: [
       { role: 'system', content: INSTRUCAO },
       {
         role: 'user',
-        content: `Titulo: ${titulo}\n\nTexto da materia:\n${texto.slice(0, 12000)}`,
+        content: `Titulo: ${titulo}\n\nTexto da materia:\n${texto.slice(0, 7000)}`,
       },
     ],
   });
