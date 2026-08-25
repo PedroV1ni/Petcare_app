@@ -177,24 +177,73 @@ async function coletar() {
       // que cabe ali: a lista do app mostra so titulo e descricao, entao
       // assim o leitor ao menos ve de onde a noticia veio.
       const resumo = limparEntulho(descricao);
-      const descricaoFinal = ehSoOTituloRepetido(resumo, titulo)
-        ? veiculo
-        : encurtar(resumo, 300);
+      const temResumoProprio = !ehSoOTituloRepetido(resumo, titulo);
 
       aprovados.push({
         titulo,
-        descricao: descricaoFinal,
+        // Fica vazio quando o feed nao deu resumo de verdade; o preview da
+        // pagina tenta preencher depois, e o veiculo entra como ultimo caso.
+        descricao: temResumoProprio ? encurtar(resumo, 400) : '',
         data,
         autor: veiculo,
         link: item.link,
+        imagem: null,
       });
       aceitosNesteFeed++;
+      if (feed.limite && aceitosNesteFeed >= feed.limite) break;
     }
 
     console.log(`  [${feed.nome}] ${itens.length} itens no feed, ${aceitosNesteFeed} aprovados`);
   }
 
   return { aprovados, descartados };
+}
+
+/**
+ * Busca og:image e og:description na pagina da noticia.
+ *
+ * Sao metatags que o proprio veiculo publica para preview de link, entao ler
+ * isso e o uso pretendido delas - diferente de raspar o corpo da materia.
+ *
+ * Nao adianta tentar com link do Google Noticias: o endereco e um redirect
+ * criptografado que so resolve no navegador, e a pagina devolve a metatag
+ * generica do proprio Google.
+ */
+async function buscarPreview(url) {
+  if (url.includes('news.google.com')) return {};
+  try {
+    const resposta = await fetch(url, {
+      redirect: 'follow',
+      signal: AbortSignal.timeout(15000),
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
+      },
+    });
+    if (!resposta.ok) return {};
+    const html = (await resposta.text()).slice(0, 400000);
+
+    const meta = (prop) => {
+      const padroes = [
+        new RegExp(`<meta[^>]+(?:property|name)=["']${prop}["'][^>]*content=["']([^"']{5,})`, 'i'),
+        new RegExp(`<meta[^>]+content=["']([^"']{5,})["'][^>]*(?:property|name)=["']${prop}["']`, 'i'),
+      ];
+      for (const p of padroes) {
+        const m = html.match(p);
+        if (m) return m[1].trim();
+      }
+      return null;
+    };
+
+    const imagem = meta('og:image');
+    return {
+      imagem: imagem && imagem.startsWith('http') ? imagem : null,
+      resumo: meta('og:description') || meta('description'),
+    };
+  } catch {
+    // Pagina fora do ar ou lenta nao pode impedir a noticia de ser publicada.
+    return {};
+  }
 }
 
 /** Duas fontes publicam a mesma pauta; mantem a primeira ocorrencia. */
@@ -253,6 +302,7 @@ async function publicar(noticias) {
       date: Timestamp.fromDate(n.data),
       author: n.autor,
       sourceUrl: n.link,
+      imageUrl: n.imagem || '',
     });
   }
   await lote.commit();
@@ -270,6 +320,24 @@ async function main() {
 
   console.log(`\n${aprovados.length} aprovados, ${descartados.length} descartados, ${noticias.length} publicaveis apos deduplicar.\n`);
 
+  // So agora busca o preview, e apenas das que serao publicadas: enriquecer as
+  // 45 aprovadas seria desperdicio de requisicao.
+  console.log('Buscando capa e resumo nas paginas...');
+  const previews = await Promise.all(noticias.map((n) => buscarPreview(n.link)));
+  let comCapa = 0;
+  let resumoRecuperado = 0;
+  noticias.forEach((n, i) => {
+    const p = previews[i];
+    if (p.imagem) { n.imagem = p.imagem; comCapa++; }
+    if (!n.descricao && p.resumo && !ehSoOTituloRepetido(p.resumo, n.titulo)) {
+      n.descricao = encurtar(limparEntulho(p.resumo), 400);
+      resumoRecuperado++;
+    }
+    // Sem resumo em lugar nenhum, o veiculo ao menos diz de onde veio.
+    if (!n.descricao) n.descricao = n.autor;
+  });
+  console.log(`  ${comCapa} com imagem de capa, ${resumoRecuperado} resumos recuperados da pagina.\n`);
+
   if (SIMULAR) {
     console.log('--- SERIAM PUBLICADAS ---');
     noticias.forEach((n, i) => {
@@ -277,6 +345,7 @@ async function main() {
       // A descricao aparece como subtitulo na lista do app, entao vale
       // conferir aqui se ela agrega algo ou so repete o titulo.
       console.log(`    resumo: ${n.descricao.slice(0, 90)}`);
+      console.log(`    capa  : ${n.imagem ? n.imagem.slice(0, 70) : '(sem imagem)'}`);
       console.log(`    ${n.data.toISOString().slice(0, 10)} | ${n.link.slice(0, 60)}`);
     });
     console.log('\n--- DESCARTADAS (amostra) ---');

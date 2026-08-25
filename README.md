@@ -79,6 +79,29 @@ keytool -list -v -keystore ~/petcare-release.jks -alias petcare
 E cadastre em Firebase Console → Configurações do projeto → Seus apps →
 Android → Adicionar impressão digital.
 
+## Planejamento
+
+### Reconhecimento de raça por IA
+
+Tirar uma foto do pet e o app sugerir a raça, ligando o resultado à tela de
+Raças que já existe.
+
+O que precisa ser decidido antes de implementar:
+
+- **Onde o modelo roda.** Na nuvem (API de visão) é mais preciso e não pesa no
+  APK, mas tem custo por chamada e exige internet. No aparelho (TensorFlow Lite
+  com MobileNet) é grátis, funciona offline e responde rápido, mas adiciona
+  alguns MB ao app e erra mais em raças parecidas.
+- **O que fazer com o erro.** Classificador de raça acerta bem em raça pura e
+  se perde em vira-lata — que é a maioria dos cães no Brasil e já é a primeira
+  entrada do `breeds.json`. A resposta precisa ser sugestão com grau de
+  confiança, nunca afirmação.
+- **Privacidade.** Se a foto sair do aparelho, isso tem que estar dito de forma
+  clara para o usuário.
+
+O projeto já tem a base: `image_picker` para a câmera, e o catálogo de 19 raças
+para onde apontar o resultado.
+
 ## Créditos das imagens
 
 As fotos das raças vêm do Wikimedia Commons. A maioria está sob licenças

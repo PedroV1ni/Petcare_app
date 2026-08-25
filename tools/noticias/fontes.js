@@ -15,6 +15,13 @@ export const FEEDS = [
     tipoDeTitulo: 'direto',
   },
   {
+    nome: 'Petlove',
+    url: 'https://www.petlove.com.br/dicas/feed',
+    // Melhor fonte que achei: publica quase todo dia, escreve para o dono do
+    // animal e o proprio RSS ja traz resumo de verdade.
+    tipoDeTitulo: 'direto',
+  },
+  {
     nome: 'CFMV',
     url: 'https://www.cfmv.gov.br/feed/',
     // Conselho Federal de Medicina Veterinaria. Fonte oficial, mas metade do
@@ -26,6 +33,11 @@ export const FEEDS = [
     url: 'https://news.google.com/rss/search?q=cuidados+com+pets+OR+sa%C3%BAde+animal+OR+vacina%C3%A7%C3%A3o+de+c%C3%A3es&hl=pt-BR&gl=BR&ceid=BR:pt-419',
     // O Google anexa " - Veiculo" ao fim do titulo; tratamos isso ao importar.
     tipoDeTitulo: 'com-sufixo-do-veiculo',
+    // Teto proposital. O link do Google e um redirect criptografado: nao da
+    // para ler og:description nem og:image dessas materias, entao elas
+    // aparecem no app sem resumo e sem capa. Limitando o volume, as fontes
+    // diretas - que trazem resumo de verdade - ficam sendo a maioria da lista.
+    limite: 10,
   },
 ];
 
