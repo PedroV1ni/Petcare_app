@@ -1,6 +1,6 @@
 {
-    "name": "petcare_app",
-    "short_name": "petcare_app",
+    "name": "PetCare",
+    "short_name": "PetCare",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
