@@ -46,6 +46,12 @@ const RACIOCINIO = /qwen3|reasoning|-r1|thinking|deepseek/i;
 let modeloEscolhido = null;
 
 /**
+ * O primeiro resumo vazio de cada execucao imprime o diagnostico completo.
+ * So o primeiro: repetir dez vezes a mesma causa so polui o log.
+ */
+let jaDiagnosticou = false;
+
+/**
  * Descobre um modelo utilizavel na conta. GROQ_MODEL, quando definida, vence
  * sem consulta - serve para forcar um modelo especifico.
  */
@@ -174,7 +180,22 @@ export async function resumir(cliente, titulo, texto) {
     .replace(/<think>[\s\S]*$/i, '')
     .trim();
 
-  if (!saida || saida.includes('SEM_RESUMO')) return null;
+  if (!saida || saida.includes('SEM_RESUMO')) {
+    // Sem isto, "0 resumidas" nao diz se o modelo recusou, se a resposta veio
+    // truncada ou se veio vazia - e a chave e secret, entao nao da para
+    // reproduzir a chamada fora do runner.
+    if (!jaDiagnosticou) {
+      jaDiagnosticou = true;
+      const escolha = resposta.choices?.[0] || {};
+      console.log(
+        `  [diagnostico] sem resumo: finish_reason=${escolha.finish_reason}` +
+          ` bruto=${bruto.length}ch limpo=${saida.length}ch` +
+          ` tokens_saida=${resposta.usage?.completion_tokens}`,
+      );
+      if (bruto) console.log(`  [diagnostico] inicio da resposta: ${bruto.slice(0, 220).replace(/\s+/g, ' ')}`);
+    }
+    return null;
+  }
 
   // Modelo aberto as vezes devolve o resumo entre aspas mesmo instruido a nao
   // fazer isso; tirar aqui e mais barato que insistir no prompt.
