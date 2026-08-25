@@ -1,0 +1,15 @@
+{
+  "name": "petcare-noticias",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Agrega noticias sobre pets de feeds RSS e publica no Firestore",
+  "scripts": {
+    "simular": "node agregar.js --simular",
+    "publicar": "node agregar.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.2",
+    "rss-parser": "^3.13.0"
+  }
+}

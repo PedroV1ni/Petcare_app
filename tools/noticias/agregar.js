@@ -1,0 +1,262 @@
+// Agrega noticias sobre pets de feeds RSS e publica na colecao `news` do
+// Firestore, no mesmo formato que o app ja le hoje.
+//
+//   node agregar.js --simular   imprime o que seria publicado, sem escrever
+//   node agregar.js             publica de verdade (exige credencial)
+//
+// A credencial vem da variavel de ambiente FIREBASE_SERVICE_ACCOUNT, com o
+// JSON da conta de servico. No GitHub Actions ela e um secret do repositorio.
+
+import Parser from 'rss-parser';
+import {
+  FEEDS,
+  TERMOS_INCLUSAO,
+  TERMOS_EXCLUSAO,
+  LIMITE_DE_NOTICIAS,
+  IDADE_MAXIMA_EM_DIAS,
+} from './fontes.js';
+
+const SIMULAR = process.argv.includes('--simular');
+
+const parser = new Parser({
+  timeout: 20000,
+  headers: { 'User-Agent': 'PetCare/1.0 (+https://github.com/PedroV1ni/Petcare_app)' },
+  // O <source> do Google Noticias traz o veiculo em campo proprio. Sem
+  // declarar aqui o rss-parser descarta a tag, e sobraria cortar o titulo
+  // no ultimo " - " - que erra quando o proprio nome do veiculo tem hifen.
+  customFields: { item: [['source', 'fonteRss']] },
+});
+
+/** O <source> vem como string ou como objeto com atributos, conforme o feed. */
+function veiculoDoItem(item) {
+  const f = item.fonteRss;
+  if (!f) return null;
+  if (typeof f === 'string') return f.trim() || null;
+  return (f._ || f['#text'] || '').trim() || null;
+}
+
+/** Remove acento e caixa, para o filtro nao depender de como foi escrito. */
+function normalizar(texto) {
+  return (texto || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase();
+}
+
+/** Tira tags HTML e espaco sobrando das descricoes, que vem com markup. */
+function limparTexto(html) {
+  return (html || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function encurtar(texto, limite) {
+  if (texto.length <= limite) return texto;
+  const corte = texto.slice(0, limite);
+  const ultimoEspaco = corte.lastIndexOf(' ');
+  return (ultimoEspaco > limite * 0.6 ? corte.slice(0, ultimoEspaco) : corte) + '...';
+}
+
+/**
+ * O Google Noticias devolve titulos no formato "Manchete - Veiculo".
+ * Separa os dois para o veiculo virar o autor da noticia no app.
+ */
+function separarTituloEVeiculo(titulo, veiculoPadrao) {
+  const posicao = titulo.lastIndexOf(' - ');
+  if (posicao > 20) {
+    return {
+      titulo: titulo.slice(0, posicao).trim(),
+      veiculo: titulo.slice(posicao + 3).trim(),
+    };
+  }
+  return { titulo: titulo.trim(), veiculo: veiculoPadrao };
+}
+
+function ehSobrePets(texto) {
+  const t = normalizar(texto);
+  return TERMOS_INCLUSAO.some((termo) => t.includes(normalizar(termo)));
+}
+
+function motivoDeDescarte(texto) {
+  const t = normalizar(texto);
+  return TERMOS_EXCLUSAO.find((termo) => t.includes(normalizar(termo))) || null;
+}
+
+async function coletar() {
+  const aprovados = [];
+  const descartados = [];
+
+  for (const feed of FEEDS) {
+    let resultado;
+    try {
+      resultado = await parser.parseURL(feed.url);
+    } catch (erro) {
+      // Um feed fora do ar nao pode derrubar a atualizacao inteira.
+      console.error(`  [${feed.nome}] falhou: ${erro.message}`);
+      continue;
+    }
+
+    const itens = resultado.items || [];
+    let aceitosNesteFeed = 0;
+
+    for (const item of itens) {
+      const tituloBruto = limparTexto(item.title);
+      const descricao = limparTexto(item.contentSnippet || item.content || item.summary);
+      const textoParaFiltro = `${tituloBruto} ${descricao}`;
+
+      // Prefere o <source> do feed; so recorre a cortar o titulo quando ele
+      // nao vem, que e o caso de alguns agregadores.
+      const veiculoDeclarado = veiculoDoItem(item);
+      let titulo = tituloBruto;
+      let veiculo = feed.nome;
+
+      if (feed.tipoDeTitulo === 'com-sufixo-do-veiculo') {
+        if (veiculoDeclarado) {
+          veiculo = veiculoDeclarado;
+          const sufixo = ` - ${veiculoDeclarado}`;
+          if (titulo.endsWith(sufixo)) titulo = titulo.slice(0, -sufixo.length).trim();
+        } else {
+          ({ titulo, veiculo } = separarTituloEVeiculo(tituloBruto, feed.nome));
+        }
+      }
+
+      if (!titulo || !item.link) continue;
+
+      const bloqueio = motivoDeDescarte(textoParaFiltro);
+      if (bloqueio) {
+        descartados.push({ titulo, motivo: `contem "${bloqueio}"` });
+        continue;
+      }
+      if (!ehSobrePets(textoParaFiltro)) {
+        descartados.push({ titulo, motivo: 'nao fala de pets' });
+        continue;
+      }
+
+      const data = item.isoDate ? new Date(item.isoDate) : new Date();
+      const idadeEmDias = (Date.now() - data.getTime()) / 86400000;
+      if (idadeEmDias > IDADE_MAXIMA_EM_DIAS) {
+        descartados.push({ titulo, motivo: `tem ${Math.round(idadeEmDias)} dias` });
+        continue;
+      }
+
+      aprovados.push({
+        titulo,
+        descricao: encurtar(descricao || titulo, 300),
+        data,
+        autor: veiculo,
+        link: item.link,
+      });
+      aceitosNesteFeed++;
+    }
+
+    console.log(`  [${feed.nome}] ${itens.length} itens no feed, ${aceitosNesteFeed} aprovados`);
+  }
+
+  return { aprovados, descartados };
+}
+
+/** Duas fontes publicam a mesma pauta; mantem a primeira ocorrencia. */
+function removerDuplicatas(lista) {
+  const vistos = new Set();
+  return lista.filter((n) => {
+    const chave = normalizar(n.titulo).replace(/[^a-z0-9]/g, '').slice(0, 60);
+    if (vistos.has(chave)) return false;
+    vistos.add(chave);
+    return true;
+  });
+}
+
+/** Id estavel a partir do link, para reexecucao nao duplicar documento. */
+function idDoDocumento(link) {
+  let hash = 0;
+  for (let i = 0; i < link.length; i++) {
+    hash = (hash * 31 + link.charCodeAt(i)) | 0;
+  }
+  return 'rss_' + Math.abs(hash).toString(36);
+}
+
+async function publicar(noticias) {
+  const credencial = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!credencial) {
+    console.error('\nFIREBASE_SERVICE_ACCOUNT nao definida. Use --simular para testar sem credencial.');
+    process.exit(1);
+  }
+
+  const { initializeApp, cert } = await import('firebase-admin/app');
+  const { getFirestore, Timestamp } = await import('firebase-admin/firestore');
+
+  initializeApp({ credential: cert(JSON.parse(credencial)) });
+  const db = getFirestore();
+  const colecao = db.collection('news');
+
+  // Remove o que foi publicado por execucoes anteriores. Documentos escritos a
+  // mao (sem o prefixo rss_) sao preservados de proposito.
+  const antigos = await colecao.get();
+  let removidos = 0;
+  let lote = db.batch();
+  let naLote = 0;
+  for (const doc of antigos.docs) {
+    if (!doc.id.startsWith('rss_')) continue;
+    lote.delete(doc.ref);
+    removidos++;
+    if (++naLote === 400) { await lote.commit(); lote = db.batch(); naLote = 0; }
+  }
+  if (naLote > 0) await lote.commit();
+
+  lote = db.batch();
+  for (const n of noticias) {
+    lote.set(colecao.doc(idDoDocumento(n.link)), {
+      title: n.titulo,
+      description: n.descricao,
+      date: Timestamp.fromDate(n.data),
+      author: n.autor,
+      sourceUrl: n.link,
+    });
+  }
+  await lote.commit();
+
+  console.log(`\nPublicado: ${noticias.length} noticias (${removidos} anteriores removidas).`);
+}
+
+async function main() {
+  console.log(SIMULAR ? '=== SIMULACAO (nada sera escrito) ===\n' : '=== Publicando no Firestore ===\n');
+
+  const { aprovados, descartados } = await coletar();
+  const noticias = removerDuplicatas(aprovados)
+    .sort((a, b) => b.data - a.data)
+    .slice(0, LIMITE_DE_NOTICIAS);
+
+  console.log(`\n${aprovados.length} aprovados, ${descartados.length} descartados, ${noticias.length} publicaveis apos deduplicar.\n`);
+
+  if (SIMULAR) {
+    console.log('--- SERIAM PUBLICADAS ---');
+    noticias.forEach((n, i) => {
+      console.log(`${String(i + 1).padStart(2)}. [${n.autor}] ${n.titulo}`);
+      console.log(`    ${n.data.toISOString().slice(0, 10)} | ${n.link.slice(0, 70)}`);
+    });
+    console.log('\n--- DESCARTADAS (amostra) ---');
+    descartados.slice(0, 15).forEach((d) => {
+      console.log(`  x ${d.titulo.slice(0, 70)}`);
+      console.log(`    motivo: ${d.motivo}`);
+    });
+    return;
+  }
+
+  if (noticias.length === 0) {
+    console.error('Nenhuma noticia aprovada. Abortando para nao esvaziar o app.');
+    process.exit(1);
+  }
+  await publicar(noticias);
+}
+
+main().catch((erro) => {
+  console.error('Falhou:', erro);
+  process.exit(1);
+});

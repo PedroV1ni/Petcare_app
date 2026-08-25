@@ -1,0 +1,39 @@
+name: Atualizar noticias
+
+# Busca os feeds, filtra o que e sobre cuidado com pets e publica na colecao
+# `news` do Firestore. O app nao muda: continua lendo a mesma colecao.
+on:
+  schedule:
+    # A cada 6 horas. Os feeds nao mudam mais rapido que isso, e assim o app
+    # nunca fica com noticia de mais de meio dia atras.
+    - cron: '0 */6 * * *'
+  # Permite disparar na mao pela aba Actions, util para testar.
+  workflow_dispatch:
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: tools/noticias/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: tools/noticias
+        run: npm ci
+
+      # Roda antes de publicar: se os feeds mudarem de formato ou sairem do ar,
+      # o log mostra o que aconteceu sem depender de olhar o Firestore.
+      - name: Conferir a curadoria
+        working-directory: tools/noticias
+        run: node agregar.js --simular
+
+      - name: Publicar no Firestore
+        working-directory: tools/noticias
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node agregar.js
