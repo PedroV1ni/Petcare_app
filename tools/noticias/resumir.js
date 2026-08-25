@@ -16,9 +16,52 @@ export function iaDisponivel() {
   return Boolean(process.env.GROQ_API_KEY);
 }
 
-// Configuravel por variavel de ambiente: a Groq aposenta modelo com alguma
-// frequencia, e trocar o nome nao deveria exigir mexer no codigo.
-const MODELO = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+/**
+ * Ordem de preferencia para resumir. O primeiro que a conta tiver e usado.
+ *
+ * Nomes de modelo na Groq mudam e sao aposentados, e a primeira execucao real
+ * falhou com 404 model_not_found justamente por isso. Em vez de fixar um nome
+ * e torcer, o script pergunta a API o que existe.
+ */
+const PREFERENCIA = [
+  'llama-3.3-70b-versatile',
+  'llama-3.1-70b-versatile',
+  'llama3-70b-8192',
+  'llama-3.1-8b-instant',
+  'llama3-8b-8192',
+  'mixtral-8x7b-32768',
+  'gemma2-9b-it',
+];
+
+/** Modelos que existem mas nao servem para resumir texto. */
+const NAO_SERVE = /whisper|tts|guard|vision|embed|distil/i;
+
+let modeloEscolhido = null;
+
+/**
+ * Descobre um modelo utilizavel na conta. GROQ_MODEL, quando definida, vence
+ * sem consulta - serve para forcar um modelo especifico.
+ */
+export async function escolherModelo(cliente) {
+  if (process.env.GROQ_MODEL) return process.env.GROQ_MODEL;
+  if (modeloEscolhido) return modeloEscolhido;
+
+  const lista = await cliente.models.list();
+  const disponiveis = (lista.data || [])
+    .map((m) => m.id)
+    .filter((id) => !NAO_SERVE.test(id));
+
+  modeloEscolhido =
+    PREFERENCIA.find((p) => disponiveis.includes(p)) ||
+    disponiveis.find((id) => /llama|mixtral|gemma|qwen/i.test(id)) ||
+    disponiveis[0];
+
+  if (!modeloEscolhido) {
+    throw new Error(`nenhum modelo utilizavel na conta. Disponiveis: ${disponiveis.join(', ') || '(nenhum)'}`);
+  }
+  console.log(`  modelo: ${modeloEscolhido} (de ${disponiveis.length} disponiveis)`);
+  return modeloEscolhido;
+}
 
 const INSTRUCAO = `Voce resume noticias sobre cuidados com animais de estimacao
 para um aplicativo brasileiro chamado PetCare, lido por donos de pets.
@@ -97,7 +140,7 @@ export async function resumir(cliente, titulo, texto) {
   if (!texto || texto.length < MINIMO_DE_CARACTERES) return null;
 
   const resposta = await cliente.chat.completions.create({
-    model: MODELO,
+    model: await escolherModelo(cliente),
     // Resumo curto: teto baixo evita resposta divagando e economiza cota.
     max_tokens: 400,
     // Temperatura baixa porque a tarefa e fidelidade ao texto, nao criacao.

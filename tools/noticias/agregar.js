@@ -8,7 +8,7 @@
 // JSON da conta de servico. No GitHub Actions ela e um secret do repositorio.
 
 import Parser from 'rss-parser';
-import { criarCliente, extrairTexto, iaDisponivel, resumir } from './resumir.js';
+import { criarCliente, escolherModelo, extrairTexto, iaDisponivel, resumir } from './resumir.js';
 import {
   FEEDS,
   TERMOS_INCLUSAO,
@@ -370,11 +370,24 @@ async function main() {
   if (!SIMULAR && iaDisponivel()) {
     const jaFeitos = await carregarResumosJaFeitos(db);
     const cliente = criarCliente();
+
+    // Resolve o modelo uma vez: se falhar aqui, falharia igual em cada uma das
+    // materias e encheria o log com o mesmo erro repetido.
+    let modeloOk = true;
+    try {
+      await escolherModelo(cliente);
+    } catch (erro) {
+      console.error(`  nao foi possivel escolher modelo: ${erro.message}`);
+      console.error('  seguindo sem resumo por IA.');
+      modeloOk = false;
+    }
+
     let resumidas = 0;
     let reaproveitadas = 0;
     let semTexto = 0;
     console.log('Resumindo com IA as materias que tem texto...');
     for (let i = 0; i < noticias.length; i++) {
+      if (!modeloOk) break;
       const texto = previews[i]?.texto;
       if (!texto) { semTexto++; continue; }
 
