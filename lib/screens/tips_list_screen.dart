@@ -11,8 +11,8 @@ class TipsListScreen extends StatefulWidget {
   const TipsListScreen({
     required this.title,
     required this.assetPath,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<TipsListScreen> createState() => _TipsListScreenState();
@@ -44,14 +44,12 @@ class _TipsListScreenState extends State<TipsListScreen> {
   }
 
   Future<void> _loadTips() async {
-    print('Tentando ler asset: ${widget.assetPath}'); // DEBUG: mostra qual arquivo está sendo lido
     final String data = await rootBundle.loadString(widget.assetPath);
     final List<dynamic> jsonResult = json.decode(data);
     setState(() {
       tips = jsonResult.map((e) => TipModel.fromJson(e)).toList();
       filteredTips = List.from(tips);
     });
-    print('Dicas/carregadas: ${tips.length}'); // DEBUG: mostra quantos itens foram lidos
   }
 
   void _applyFilters() {
@@ -81,7 +79,7 @@ class _TipsListScreenState extends State<TipsListScreen> {
           children: [
             Expanded(
               child: DropdownButtonFormField<String>(
-                value: selectedCategory,
+                initialValue: selectedCategory,
                 items: categories
                     .map((cat) => DropdownMenuItem(
                           value: cat,

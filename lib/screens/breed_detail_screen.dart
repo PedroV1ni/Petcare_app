@@ -3,7 +3,7 @@ import '../models/breed.dart';
 
 class BreedDetailScreen extends StatelessWidget {
   final Breed breed;
-  const BreedDetailScreen({Key? key, required this.breed}) : super(key: key);
+  const BreedDetailScreen({super.key, required this.breed});
 
   @override
   Widget build(BuildContext context) {

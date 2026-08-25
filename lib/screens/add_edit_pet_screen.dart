@@ -10,7 +10,7 @@ import '../providers/pet_provider.dart';
 
 class AddEditPetScreen extends StatefulWidget {
   final PetModel? pet;
-  const AddEditPetScreen({Key? key, this.pet}) : super(key: key);
+  const AddEditPetScreen({super.key, this.pet});
 
   @override
   State<AddEditPetScreen> createState() => _AddEditPetScreenState();
@@ -262,7 +262,7 @@ class _AddEditPetScreenState extends State<AddEditPetScreen> {
 
             // Raça
             DropdownButtonFormField<String>(
-              value: (_breed != null && _currentBreeds.contains(_breed)) ? _breed : null,
+              initialValue: (_breed != null && _currentBreeds.contains(_breed)) ? _breed : null,
               decoration: const InputDecoration(labelText: 'Raça', border: OutlineInputBorder()),
               items: _currentBreeds.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
               onChanged: (v) => setState(() => _breed = v),
@@ -285,7 +285,7 @@ class _AddEditPetScreenState extends State<AddEditPetScreen> {
 
             // Porte
             DropdownButtonFormField<String>(
-              value: _size,
+              initialValue: _size,
               decoration: const InputDecoration(labelText: 'Porte', border: OutlineInputBorder()),
               items: ['Pequeno', 'Médio', 'Grande']
                   .map((s) => DropdownMenuItem(value: s, child: Text(s)))

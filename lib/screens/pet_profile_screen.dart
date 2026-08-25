@@ -10,11 +10,11 @@ class PetProfileScreen extends StatefulWidget {
   final VoidCallback onDelete;
 
   const PetProfileScreen({
-    Key? key,
+    super.key,
     required this.pet,
     required this.onEdit,
     required this.onDelete,
-  }) : super(key: key);
+  });
 
   @override
   State<PetProfileScreen> createState() => _PetProfileScreenState();

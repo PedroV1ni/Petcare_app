@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class NewsPawIcon extends StatelessWidget {
   final double size;
-  const NewsPawIcon({this.size = 28});
+  const NewsPawIcon({super.key, this.size = 28});
   @override
   Widget build(BuildContext context) {
     return SizedBox(

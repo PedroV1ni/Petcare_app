@@ -5,7 +5,7 @@ import '../models/breed.dart';
 import 'breed_detail_screen.dart';
 
 class BreedListScreen extends StatefulWidget {
-  const BreedListScreen({Key? key}) : super(key: key);
+  const BreedListScreen({super.key});
 
   @override
   State<BreedListScreen> createState() => _BreedListScreenState();

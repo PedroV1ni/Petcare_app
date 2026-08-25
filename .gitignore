@@ -46,3 +46,8 @@ app.*.map.json
 
 # Claude Code (configuracao local do agente)
 .claude/
+
+# Assinatura de release - nunca versionar chave nem senha
+/android/key.properties
+*.jks
+*.keystore

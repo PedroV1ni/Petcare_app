@@ -12,13 +12,13 @@ class PetImageWidget extends StatelessWidget {
   final BorderRadius? borderRadius;
 
   const PetImageWidget({
-    Key? key,
+    super.key,
     required this.pet,
     this.width,
     this.height,
     this.fit = BoxFit.cover,
     this.borderRadius,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

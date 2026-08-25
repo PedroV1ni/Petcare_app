@@ -4,6 +4,8 @@ import '../models/care.dart';
 import 'care_detail_screen.dart';
 
 class CareScreen extends StatelessWidget {
+  CareScreen({super.key});
+
   final DataService _service = DataService();
 
   @override

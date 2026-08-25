@@ -7,9 +7,10 @@ import '../utils/pet_image_widget.dart';
 import '../utils/app_widgets.dart';
 import 'add_edit_pet_screen.dart';
 import 'pet_profile_screen.dart';
+import 'creditos_screen.dart';
 
 class ProfileScreenMain extends StatelessWidget {
-  const ProfileScreenMain({Key? key}) : super(key: key);
+  const ProfileScreenMain({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +20,14 @@ class ProfileScreenMain extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Meus Pets'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            tooltip: 'Creditos das imagens',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CreditosScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Sair da conta',

@@ -68,6 +68,7 @@ flutter:
   assets:
     # Pastas inteiras: qualquer arquivo novo e empacotado automaticamente,
     # sem precisar declarar imagem por imagem aqui.
+    - assets/
     - assets/breeds/
     - assets/icons/
     - assets/pets/

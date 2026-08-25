@@ -3,7 +3,7 @@ import '../models/care.dart';
 
 class CareDetailScreen extends StatelessWidget {
   final Care care;
-  const CareDetailScreen({Key? key, required this.care}) : super(key: key);
+  const CareDetailScreen({super.key, required this.care});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +23,7 @@ class CareDetailScreen extends StatelessWidget {
           if (care.steps != null && care.steps!.isNotEmpty) ...[
             Text('Passos:', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 4),
-            ...care.steps!.map((s) => Text('• $s')).toList(),
+            ...care.steps!.map((s) => Text('• $s')),
           ],
         ]),
       ),

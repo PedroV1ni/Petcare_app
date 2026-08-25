@@ -3,7 +3,7 @@ import '../models/tip_model.dart';
 
 class TipDetailScreen extends StatelessWidget {
   final TipModel tip;
-  const TipDetailScreen({required this.tip});
+  const TipDetailScreen({super.key, required this.tip});
 
   @override
   Widget build(BuildContext context) {

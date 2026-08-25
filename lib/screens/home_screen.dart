@@ -10,7 +10,7 @@ import '../utils/pet_image_widget.dart';
 import '../utils/app_widgets.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -181,7 +181,7 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<PetModel>(
-                value: selected,
+                initialValue: selected,
                 decoration: const InputDecoration(
                   labelText: 'Pet',
                   border: OutlineInputBorder(),
@@ -193,7 +193,7 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: type,
+                initialValue: type,
                 decoration: const InputDecoration(
                   labelText: 'Tipo',
                   border: OutlineInputBorder(),

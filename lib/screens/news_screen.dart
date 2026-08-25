@@ -4,6 +4,8 @@ import '../models/news.dart';
 import 'news_detail_screen.dart';
 
 class NewsScreen extends StatelessWidget {
+  NewsScreen({super.key});
+
   final _service = DataService();
 
   @override

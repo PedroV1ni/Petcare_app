@@ -7,11 +7,11 @@ class AppErrorWidget extends StatelessWidget {
   final IconData icon;
 
   const AppErrorWidget({
-    Key? key,
+    super.key,
     required this.message,
     this.onRetry,
     this.icon = Icons.error_outline,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +46,7 @@ class AppErrorWidget extends StatelessWidget {
 /// Widget de loading reutilizável.
 class AppLoadingWidget extends StatelessWidget {
   final String? message;
-  const AppLoadingWidget({Key? key, this.message}) : super(key: key);
+  const AppLoadingWidget({super.key, this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -72,11 +72,11 @@ class AppEmptyWidget extends StatelessWidget {
   final Widget? action;
 
   const AppEmptyWidget({
-    Key? key,
+    super.key,
     required this.message,
     this.icon = Icons.inbox_outlined,
     this.action,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
