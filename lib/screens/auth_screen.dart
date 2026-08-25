@@ -48,6 +48,22 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  Future<void> _entrarComGoogle() async {
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
+    try {
+      await _auth.signInWithGoogle();
+    } catch (e) {
+      // mensagemDeErro devolve null quando o usuario so fechou o seletor
+      // de contas - nesse caso a tela nao mostra erro nenhum.
+      if (mounted) setState(() => _erro = AuthService.mensagemDeErro(e));
+    } finally {
+      if (mounted) setState(() => _carregando = false);
+    }
+  }
+
   Future<void> _recuperarSenha() async {
     final email = _emailCtrl.text.trim();
     if (email.isEmpty) {
@@ -195,6 +211,53 @@ class _AuthScreenState extends State<AuthScreen> {
                                 style: const TextStyle(
                                     fontSize: 16, fontWeight: FontWeight.w600),
                               ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: Divider(color: Colors.brown.shade100)),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            'ou',
+                            style: TextStyle(color: Colors.brown.shade300),
+                          ),
+                        ),
+                        Expanded(child: Divider(color: Colors.brown.shade100)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 50,
+                      child: OutlinedButton(
+                        onPressed: _carregando ? null : _entrarComGoogle,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.brown.shade800,
+                          side: BorderSide(color: Colors.brown.shade200),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              'G',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF4285F4),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const Text(
+                              'Entrar com Google',
+                              style: TextStyle(
+                                  fontSize: 15, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     if (!_cadastrando)

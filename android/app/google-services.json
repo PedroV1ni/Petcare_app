@@ -12,7 +12,20 @@
           "package_name": "com.example.petcare_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "416285618937-col2bobaik8on0ie59uqfp0gjij6tscp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.petcare_app",
+            "certificate_hash": "267634cfec03a94981b6744418e2dc38d9db04a6"
+          }
+        },
+        {
+          "client_id": "416285618937-b7i5f1qcqtj2k7uu95o7u516867i0uje.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBJCOalGVzue8Bn1S9GAuaSOb5FcjERG08"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "416285618937-b7i5f1qcqtj2k7uu95o7u516867i0uje.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "416285618937-kvser98ei1s488usl09m3fhfhsbi2shr.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.petcareApp"
+              }
+            }
+          ]
         }
       }
     }
