@@ -104,7 +104,20 @@ publicar.
 | `GROQ_API_KEY` | não | Resumir as matérias por IA. Sem ela o job publica normalmente, usando o resumo do próprio veículo |
 
 Há ainda a variável opcional `GROQ_MODEL`, caso a Groq aposente o modelo padrão
-— dá para trocar sem mexer no código.
+— dá para trocar sem mexer no código. Sem ela o script pergunta à API quais
+modelos a conta tem e escolhe sozinho, porque nomes de modelo são aposentados
+sem aviso e fixar um no código quebra o job em silêncio.
+
+### Limites da camada gratuita
+
+A camada gratuita da Groq permite 8.000 tokens por minuto. O job manda no
+máximo 7.000 caracteres de cada matéria e pede até 700 tokens de resposta, o que
+cabe com folga. Se ainda assim estourar, a Groq responde quanto falta esperar e
+o script aguarda e repete, em vez de descartar a matéria.
+
+Cada execução só resume o que é novo: matérias já resumidas antes são
+reaproveitadas. Como as fontes publicam uma ou duas por dia e o job roda de 6 em
+6 horas, isso é a diferença entre ~50 e ~1.200 chamadas por mês.
 
 ### Por que só parte das notícias tem resumo
 
