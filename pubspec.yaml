@@ -65,23 +65,13 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/breeds/breeds.json
-    - assets/icons/news_paw.png
-    - assets/icons/heart_cross.png
-    - assets/pets/rex.jpg
-    - assets/pets/mia.jpg
-    - assets/breeds/golden.jpg
-    - assets/breeds/siames.jpg
-    - assets/breeds/pug.jpg
-    - assets/breeds/mainecoon.jpg
-    - assets/breeds/pastoralemao.jpg
-    - assets/tips/tips.json
-    - assets/articles/articles.json
-    - assets/articles/adocao.jpg
-    - assets/articles/amigos.jpg
-    - assets/tips/banho.jpg
-    - assets/tips/vacina.jpg
-    
+    # Pastas inteiras: qualquer arquivo novo e empacotado automaticamente,
+    # sem precisar declarar imagem por imagem aqui.
+    - assets/breeds/
+    - assets/icons/
+    - assets/pets/
+    - assets/tips/
+    - assets/articles/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

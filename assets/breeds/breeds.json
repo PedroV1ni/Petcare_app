@@ -132,6 +132,17 @@
     "curiosities": ["Nome significa 'cão-texugo' em alemão.", "Existem nas versões pelo curto, longo e duro."]
   },
   {
+    "name": "Pastor Alemão",
+    "species": "dog",
+    "image": "assets/breeds/pastoralemao.jpg",
+    "origin": "Alemanha",
+    "size": "Grande",
+    "temperament": ["Corajoso", "Leal", "Confiante", "Inteligente"],
+    "description": "O Pastor Alemão é uma das raças mais versáteis que existem. Trabalha como cão policial, guia e de resgate, e é profundamente dedicado à família.",
+    "tips": ["Precisa de exercício intenso e estímulo mental diário.", "Socialize desde filhote para evitar desconfiança com estranhos.", "Acompanhe a saúde do quadril, ponto frágil da raça."],
+    "curiosities": ["Está entre as raças mais inteligentes do mundo.", "Foi criado no fim do século XIX para pastorear rebanhos."]
+  },
+  {
     "name": "SRD (Vira-lata)",
     "species": "cat",
     "image": "assets/breeds/srd_cat.jpg",
