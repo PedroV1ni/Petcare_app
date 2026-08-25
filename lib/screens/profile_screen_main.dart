@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/auth_service.dart';
 import '../providers/pet_provider.dart';
 import '../models/pet_model.dart';
 import '../utils/pet_image_widget.dart';
@@ -15,7 +16,16 @@ class ProfileScreenMain extends StatelessWidget {
     final petProv = context.watch<PetProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Meus Pets')),
+      appBar: AppBar(
+        title: const Text('Meus Pets'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Sair da conta',
+            onPressed: () => _sair(context),
+          ),
+        ],
+      ),
       body: petProv.isLoading
           ? const AppLoadingWidget(message: 'Carregando pets...')
           : petProv.error != null
@@ -67,6 +77,31 @@ class ProfileScreenMain extends StatelessWidget {
                       ],
                     ),
     );
+  }
+
+  Future<void> _sair(BuildContext context) async {
+    final auth = AuthService();
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sair da conta'),
+        content: Text(
+          'Voce esta conectado como ${auth.currentUser?.email ?? ""}. '
+          'Seus pets e lembretes continuam salvos na nuvem.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sair'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar == true) await auth.signOut();
   }
 
   void _goToAdd(BuildContext context) {

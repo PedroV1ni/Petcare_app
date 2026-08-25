@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
+import 'services/auth_service.dart';
+import 'screens/auth_screen.dart';
 import 'providers/pet_provider.dart';
 import 'providers/reminder_provider.dart';
 import 'screens/home_screen.dart';
@@ -45,9 +48,39 @@ class PetCareApp extends StatelessWidget {
             actionsIconTheme: IconThemeData(color: Colors.brown),
           ),
         ),
-        home: const MainNavigation(),
+        home: const AuthGate(),
         debugShowCheckedModeBanner: false,
       ),
+    );
+  }
+}
+
+/// Decide entre a tela de login e o app conforme o estado do FirebaseAuth.
+///
+/// O stream fica guardado no State: recria-lo a cada build abriria uma
+/// assinatura nova a cada frame.
+class AuthGate extends StatefulWidget {
+  const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  late final Stream<User?> _authStream = AuthService().authStateChanges;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: _authStream,
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return snap.data == null ? const AuthScreen() : const MainNavigation();
+      },
     );
   }
 }

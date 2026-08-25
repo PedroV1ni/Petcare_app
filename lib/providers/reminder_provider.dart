@@ -1,16 +1,36 @@
-import 'dart:convert';
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/reminder_model.dart';
 
+/// Lembretes do usuario logado, em `users/{uid}/reminders`.
+///
+/// Mesmo desenho do PetProvider: a colecao e assinada no login e liberada no
+/// logout, e a lista se atualiza sozinha a cada mudanca no Firestore.
 class ReminderProvider with ChangeNotifier {
+  ReminderProvider() {
+    _authSub = FirebaseAuth.instance.authStateChanges().listen(_onAuthChanged);
+  }
+
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  StreamSubscription<User?>? _authSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _remSub;
+
   List<ReminderModel> _reminders = [];
   bool _isLoading = false;
   String? _error;
+  String? _uid;
 
   List<ReminderModel> get reminders => List.unmodifiable(_reminders);
   bool get isLoading => _isLoading;
   String? get error => _error;
+
+  CollectionReference<Map<String, dynamic>> get _col =>
+      _db.collection('users').doc(_uid).collection('reminders');
 
   // ----- Helpers de hoje -----
 
@@ -35,36 +55,59 @@ class ReminderProvider with ChangeNotifier {
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
   }
 
-  // ----- Carregamento -----
+  // ----- Ciclo de vida da sessao -----
 
-  Future<void> loadReminders() async {
+  void _onAuthChanged(User? user) {
+    if (user?.uid == _uid) return;
+    _uid = user?.uid;
+    _remSub?.cancel();
+    _remSub = null;
+
+    if (_uid == null) {
+      _reminders = [];
+      _isLoading = false;
+      _error = null;
+      notifyListeners();
+      return;
+    }
+    _subscribe();
+  }
+
+  void _subscribe() {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('reminders');
-      if (raw != null) {
-        final List decoded = json.decode(raw);
-        _reminders = decoded.map((e) => ReminderModel.fromJson(e)).toList();
-      }
-    } catch (e) {
-      _error = 'Erro ao carregar lembretes: $e';
-      debugPrint(_error);
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    _remSub = _col.orderBy('dateTime').snapshots().listen(
+      (snap) {
+        _reminders =
+            snap.docs.map((d) => ReminderModel.fromJson(d.data())).toList();
+        _isLoading = false;
+        _error = null;
+        notifyListeners();
+      },
+      onError: (e) {
+        _error = 'Erro ao carregar lembretes: $e';
+        _isLoading = false;
+        debugPrint(_error);
+        notifyListeners();
+      },
+    );
+  }
+
+  /// Reassina a colecao. Serve para o botao de tentar de novo das telas.
+  Future<void> loadReminders() async {
+    if (_uid == null) return;
+    await _remSub?.cancel();
+    _subscribe();
   }
 
   // ----- CRUD -----
 
   Future<void> addReminder(ReminderModel reminder) async {
+    if (_uid == null) return;
     try {
-      _reminders.add(reminder);
-      await _persist();
-      notifyListeners();
+      await _col.doc(reminder.id).set(reminder.toJson());
     } catch (e) {
       _error = 'Erro ao adicionar lembrete: $e';
       notifyListeners();
@@ -72,13 +115,9 @@ class ReminderProvider with ChangeNotifier {
   }
 
   Future<void> updateReminder(ReminderModel updated) async {
+    if (_uid == null) return;
     try {
-      final idx = _reminders.indexWhere((r) => r.id == updated.id);
-      if (idx != -1) {
-        _reminders[idx] = updated;
-        await _persist();
-        notifyListeners();
-      }
+      await _col.doc(updated.id).set(updated.toJson());
     } catch (e) {
       _error = 'Erro ao atualizar lembrete: $e';
       notifyListeners();
@@ -86,14 +125,11 @@ class ReminderProvider with ChangeNotifier {
   }
 
   Future<void> toggleDone(String id) async {
+    if (_uid == null) return;
     try {
       final idx = _reminders.indexWhere((r) => r.id == id);
-      if (idx != -1) {
-        final r = _reminders[idx];
-        _reminders[idx] = r.copyWith(isDone: !r.isDone);
-        await _persist();
-        notifyListeners();
-      }
+      if (idx == -1) return;
+      await _col.doc(id).update({'isDone': !_reminders[idx].isDone});
     } catch (e) {
       _error = 'Erro ao marcar lembrete: $e';
       notifyListeners();
@@ -101,26 +137,24 @@ class ReminderProvider with ChangeNotifier {
   }
 
   Future<void> removeReminder(String id) async {
+    if (_uid == null) return;
     try {
-      _reminders.removeWhere((r) => r.id == id);
-      await _persist();
-      notifyListeners();
+      await _col.doc(id).delete();
     } catch (e) {
       _error = 'Erro ao remover lembrete: $e';
       notifyListeners();
     }
   }
 
-  // ----- Persistência -----
-
-  Future<void> _persist() async {
-    final prefs = await SharedPreferences.getInstance();
-    final encoded = json.encode(_reminders.map((r) => r.toJson()).toList());
-    await prefs.setString('reminders', encoded);
-  }
-
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _remSub?.cancel();
+    _authSub?.cancel();
+    super.dispose();
   }
 }

@@ -21,10 +21,17 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
-    // → Exemplo de coleções de lembretes por usuário (se usar auth)
-    match /users/{userId}/reminders/{reminderId} {
+    // → Dados privados de cada usuário: pets, lembretes e o que vier depois.
+    //   Só o dono autenticado lê e escreve. O curinga {document=**} cobre
+    //   qualquer subcoleção sem precisar de uma regra nova a cada uma.
+    match /users/{userId} {
       allow read, write: if request.auth != null
-                        && request.auth.uid == userId;
+                         && request.auth.uid == userId;
+
+      match /{document=**} {
+        allow read, write: if request.auth != null
+                           && request.auth.uid == userId;
+      }
     }
 
     // → Nega tudo o mais
