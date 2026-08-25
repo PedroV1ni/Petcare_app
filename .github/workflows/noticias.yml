@@ -36,4 +36,7 @@ jobs:
         working-directory: tools/noticias
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          # Opcional: sem ela o agregador publica sem resumo por IA, em vez
+          # de falhar.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: node agregar.js

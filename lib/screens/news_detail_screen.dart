@@ -77,6 +77,7 @@ class NewsDetailScreen extends StatelessWidget {
                       color: Colors.brown.shade800,
                     ),
                   ),
+                  if (news.aiSummary) _avisoDeIA(),
                   const SizedBox(height: 24),
                 ] else ...[
                   // Materia sem resumo disponivel: dizer isso e melhor do que
@@ -147,6 +148,24 @@ class NewsDetailScreen extends StatelessWidget {
           child: Icon(Icons.image_not_supported_outlined,
               size: 40, color: Colors.brown.shade200),
         ),
+      ),
+    );
+  }
+
+  /// Aviso discreto de que o resumo foi gerado, nao escrito pelo veiculo.
+  Widget _avisoDeIA() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.auto_awesome, size: 13, color: Colors.brown.shade300),
+          const SizedBox(width: 5),
+          Text(
+            'Resumido por IA',
+            style: TextStyle(fontSize: 11.5, color: Colors.brown.shade300),
+          ),
+        ],
       ),
     );
   }

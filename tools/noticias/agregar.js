@@ -8,6 +8,7 @@
 // JSON da conta de servico. No GitHub Actions ela e um secret do repositorio.
 
 import Parser from 'rss-parser';
+import { criarCliente, extrairTexto, iaDisponivel, resumir } from './resumir.js';
 import {
   FEEDS,
   TERMOS_INCLUSAO,
@@ -188,6 +189,7 @@ async function coletar() {
         autor: veiculo,
         link: item.link,
         imagem: null,
+        resumoPorIA: false,
       });
       aceitosNesteFeed++;
       if (feed.limite && aceitosNesteFeed >= feed.limite) break;
@@ -239,6 +241,9 @@ async function buscarPreview(url) {
     return {
       imagem: imagem && imagem.startsWith('http') ? imagem : null,
       resumo: meta('og:description') || meta('description'),
+      // Guardado para a IA resumir. So existe quando o link e direto: com o
+      // redirect do Google nem chegamos na materia.
+      texto: extrairTexto(html),
     };
   } catch {
     // Pagina fora do ar ou lenta nao pode impedir a noticia de ser publicada.
@@ -303,6 +308,7 @@ async function publicar(noticias) {
       author: n.autor,
       sourceUrl: n.link,
       imageUrl: n.imagem || '',
+      aiSummary: n.resumoPorIA,
     });
   }
   await lote.commit();
@@ -333,10 +339,41 @@ async function main() {
       n.descricao = encurtar(limparEntulho(p.resumo), 400);
       resumoRecuperado++;
     }
-    // Sem resumo em lugar nenhum, o veiculo ao menos diz de onde veio.
-    if (!n.descricao) n.descricao = n.autor;
   });
   console.log(`  ${comCapa} com imagem de capa, ${resumoRecuperado} resumos recuperados da pagina.\n`);
+
+  // A IA entra depois do preview, e so onde ha texto de materia. Sem texto ela
+  // teria de inventar, e num app de saude animal isso nao e aceitavel.
+  if (!SIMULAR && iaDisponivel()) {
+    const cliente = criarCliente();
+    let resumidas = 0;
+    let semTexto = 0;
+    console.log('Resumindo com IA as materias que tem texto...');
+    for (let i = 0; i < noticias.length; i++) {
+      const texto = previews[i]?.texto;
+      if (!texto) { semTexto++; continue; }
+      try {
+        const resumo = await resumir(cliente, noticias[i].titulo, texto);
+        if (resumo) {
+          noticias[i].descricao = resumo;
+          noticias[i].resumoPorIA = true;
+          resumidas++;
+        }
+      } catch (erro) {
+        // Falha de IA nao pode derrubar a atualizacao: a noticia so fica com
+        // o resumo que ja tinha.
+        console.error(`  falhou em "${noticias[i].titulo.slice(0, 45)}": ${erro.message}`);
+      }
+    }
+    console.log(`  ${resumidas} resumidas por IA, ${semTexto} sem texto acessivel.\n`);
+  } else if (!SIMULAR) {
+    console.log('ANTHROPIC_API_KEY nao definida: seguindo sem resumo por IA.\n');
+  }
+
+  // Sem resumo em lugar nenhum, o veiculo ao menos diz de onde veio.
+  for (const n of noticias) {
+    if (!n.descricao) n.descricao = n.autor;
+  }
 
   if (SIMULAR) {
     console.log('--- SERIAM PUBLICADAS ---');

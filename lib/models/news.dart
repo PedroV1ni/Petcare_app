@@ -11,6 +11,9 @@ class News {
   /// nao publica a metatag ou quando o link e um redirect do Google Noticias,
   /// que nao da para resolver fora do navegador.
   final String imageUrl;
+  /// Marca resumo gerado por IA a partir do texto da materia. O app precisa
+  /// avisar isso ao leitor - resumo automatico pode errar enfase.
+  final bool aiSummary;
 
   News({
     required this.id,
@@ -20,6 +23,7 @@ class News {
     required this.author,
     required this.sourceUrl,
     this.imageUrl = '',
+    this.aiSummary = false,
   });
 
   bool get temCapa => imageUrl.isNotEmpty;
@@ -34,6 +38,7 @@ class News {
       author: data['author'] ?? '',
       sourceUrl: data['sourceUrl'] ?? '',
       imageUrl: data['imageUrl'] ?? '',
+      aiSummary: data['aiSummary'] ?? false,
     );
   }
 }
