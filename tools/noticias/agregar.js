@@ -271,18 +271,38 @@ function idDoDocumento(link) {
   return 'rss_' + Math.abs(hash).toString(36);
 }
 
-async function publicar(noticias) {
+async function conectar() {
   const credencial = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!credencial) {
-    console.error('\nFIREBASE_SERVICE_ACCOUNT nao definida. Use --simular para testar sem credencial.');
+    console.error('FIREBASE_SERVICE_ACCOUNT nao definida. Use --simular para testar sem credencial.');
     process.exit(1);
   }
-
   const { initializeApp, cert } = await import('firebase-admin/app');
-  const { getFirestore, Timestamp } = await import('firebase-admin/firestore');
-
+  const { getFirestore } = await import('firebase-admin/firestore');
   initializeApp({ credential: cert(JSON.parse(credencial)) });
-  const db = getFirestore();
+  return getFirestore();
+}
+
+/**
+ * Resumos ja gerados em execucoes anteriores, por id de documento.
+ *
+ * O job roda a cada 6 horas, mas as fontes publicam uma ou duas materias por
+ * dia. Sem isso as mesmas materias voltariam para a IA quatro vezes ao dia,
+ * todo dia - pagando de novo pelo mesmo resumo. O id do documento vem do
+ * link, entao e estavel entre execucoes.
+ */
+async function carregarResumosJaFeitos(db) {
+  const mapa = new Map();
+  const docs = await db.collection('news').get();
+  for (const doc of docs.docs) {
+    const d = doc.data();
+    if (d.aiSummary && d.description) mapa.set(doc.id, d.description);
+  }
+  return mapa;
+}
+
+async function publicar(db, noticias) {
+  const { Timestamp } = await import('firebase-admin/firestore');
   const colecao = db.collection('news');
 
   // Remove o que foi publicado por execucoes anteriores. Documentos escritos a
@@ -342,16 +362,32 @@ async function main() {
   });
   console.log(`  ${comCapa} com imagem de capa, ${resumoRecuperado} resumos recuperados da pagina.\n`);
 
+  // Conecta antes da IA para reaproveitar resumo ja gerado.
+  const db = SIMULAR ? null : await conectar();
+
   // A IA entra depois do preview, e so onde ha texto de materia. Sem texto ela
   // teria de inventar, e num app de saude animal isso nao e aceitavel.
   if (!SIMULAR && iaDisponivel()) {
+    const jaFeitos = await carregarResumosJaFeitos(db);
     const cliente = criarCliente();
     let resumidas = 0;
+    let reaproveitadas = 0;
     let semTexto = 0;
     console.log('Resumindo com IA as materias que tem texto...');
     for (let i = 0; i < noticias.length; i++) {
       const texto = previews[i]?.texto;
       if (!texto) { semTexto++; continue; }
+
+      // Materia ja resumida antes: reusa. Sem isso o job pagaria de novo pelo
+      // mesmo resumo a cada 6 horas, e as fontes publicam uma vez por dia.
+      const anterior = jaFeitos.get(idDoDocumento(noticias[i].link));
+      if (anterior) {
+        noticias[i].descricao = anterior;
+        noticias[i].resumoPorIA = true;
+        reaproveitadas++;
+        continue;
+      }
+
       try {
         const resumo = await resumir(cliente, noticias[i].titulo, texto);
         if (resumo) {
@@ -365,7 +401,7 @@ async function main() {
         console.error(`  falhou em "${noticias[i].titulo.slice(0, 45)}": ${erro.message}`);
       }
     }
-    console.log(`  ${resumidas} resumidas por IA, ${semTexto} sem texto acessivel.\n`);
+    console.log(`  ${resumidas} novas resumidas, ${reaproveitadas} reaproveitadas, ${semTexto} sem texto acessivel.\n`);
   } else if (!SIMULAR) {
     console.log('ANTHROPIC_API_KEY nao definida: seguindo sem resumo por IA.\n');
   }
@@ -397,7 +433,7 @@ async function main() {
     console.error('Nenhuma noticia aprovada. Abortando para nao esvaziar o app.');
     process.exit(1);
   }
-  await publicar(noticias);
+  await publicar(db, noticias);
 }
 
 main().catch((erro) => {
