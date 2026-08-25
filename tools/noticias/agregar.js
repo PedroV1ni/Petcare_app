@@ -57,6 +57,33 @@ function limparTexto(html) {
     .trim();
 }
 
+/**
+ * Tira o entulho que os feeds trazem no lugar de resumo: rodape de WordPress
+ * ("O post X apareceu primeiro em Y") e cabecalho de data que o CFMV inclui
+ * no corpo ("25/08/2026 - Atualizado em 25/08/2026 - 8:56am ...").
+ */
+function limparEntulho(texto) {
+  return texto
+    .replace(/\bO post .*?apareceu primeiro em .*$/i, '')
+    .replace(/\bThe post .*?appeared first on .*$/i, '')
+    .replace(/^\d{1,2}\/\d{1,2}\/\d{4}\s*[–-]\s*(Atualizado em\s*)?/i, '')
+    .replace(/^\d{1,2}\/\d{1,2}\/\d{4}\s*[–-]\s*\d{1,2}:\d{2}\s*(am|pm)?\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * O Google Noticias repete o titulo no lugar do resumo, e ai a lista do app
+ * mostra a mesma frase duas vezes. Detecta isso comparando o inicio dos dois.
+ */
+function ehSoOTituloRepetido(descricao, titulo) {
+  const norm = (t) => normalizar(t).replace(/[^a-z0-9]/g, '');
+  const d = norm(descricao);
+  const t = norm(titulo);
+  if (!d) return true;
+  return d.startsWith(t.slice(0, 40)) || t.startsWith(d.slice(0, 40));
+}
+
 function encurtar(texto, limite) {
   if (texto.length <= limite) return texto;
   const corte = texto.slice(0, limite);
@@ -146,9 +173,17 @@ async function coletar() {
         continue;
       }
 
+      // Quando nao ha resumo de verdade, o veiculo e a informacao mais util
+      // que cabe ali: a lista do app mostra so titulo e descricao, entao
+      // assim o leitor ao menos ve de onde a noticia veio.
+      const resumo = limparEntulho(descricao);
+      const descricaoFinal = ehSoOTituloRepetido(resumo, titulo)
+        ? veiculo
+        : encurtar(resumo, 300);
+
       aprovados.push({
         titulo,
-        descricao: encurtar(descricao || titulo, 300),
+        descricao: descricaoFinal,
         data,
         autor: veiculo,
         link: item.link,
@@ -239,7 +274,10 @@ async function main() {
     console.log('--- SERIAM PUBLICADAS ---');
     noticias.forEach((n, i) => {
       console.log(`${String(i + 1).padStart(2)}. [${n.autor}] ${n.titulo}`);
-      console.log(`    ${n.data.toISOString().slice(0, 10)} | ${n.link.slice(0, 70)}`);
+      // A descricao aparece como subtitulo na lista do app, entao vale
+      // conferir aqui se ela agrega algo ou so repete o titulo.
+      console.log(`    resumo: ${n.descricao.slice(0, 90)}`);
+      console.log(`    ${n.data.toISOString().slice(0, 10)} | ${n.link.slice(0, 60)}`);
     });
     console.log('\n--- DESCARTADAS (amostra) ---');
     descartados.slice(0, 15).forEach((d) => {

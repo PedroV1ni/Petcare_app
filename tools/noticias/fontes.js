@@ -73,6 +73,12 @@ export const TERMOS_EXCLUSAO = [
   // Nota de falecimento e homenagem institucional: relevante para a classe
   // veterinaria, sem utilidade para quem so quer cuidar do proprio pet.
   'lamenta o falecimento', 'nota de pesar', 'in memoriam',
+  'morte da médica', 'morte do médico', 'morte da veterinár',
+  'morte do veterinár', 'faleceu', 'vítima fatal', 'vitima fatal',
+
+  // Pauta sindical e trabalhista da profissao, mesma logica: interessa ao
+  // veterinario, nao a quem tem um cachorro em casa.
+  'riscos ocupacionais', 'piso salarial', 'carga horária da categoria',
 
   // Materia de negocio, escrita para lojista e nao para dono de pet
   'mercado pet brasileiro', 'faturamento', 'balanço financeiro',
