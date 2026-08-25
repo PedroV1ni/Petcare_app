@@ -9,8 +9,8 @@
     "publicar": "node agregar.js"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.120.0",
     "firebase-admin": "^13.0.2",
+    "groq-sdk": "^1.5.0",
     "rss-parser": "^3.13.0"
   }
 }

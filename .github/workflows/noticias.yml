@@ -37,6 +37,8 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           # Opcional: sem ela o agregador publica sem resumo por IA, em vez
-          # de falhar.
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # de falhar. GROQ_MODEL so e preciso se a Groq aposentar o modelo
+          # padrao - da para trocar por variavel, sem mexer no codigo.
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL: ${{ vars.GROQ_MODEL }}
         run: node agregar.js

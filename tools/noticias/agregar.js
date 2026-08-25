@@ -403,7 +403,7 @@ async function main() {
     }
     console.log(`  ${resumidas} novas resumidas, ${reaproveitadas} reaproveitadas, ${semTexto} sem texto acessivel.\n`);
   } else if (!SIMULAR) {
-    console.log('ANTHROPIC_API_KEY nao definida: seguindo sem resumo por IA.\n');
+    console.log('GROQ_API_KEY nao definida: seguindo sem resumo por IA.\n');
   }
 
   // Sem resumo em lugar nenhum, o veiculo ao menos diz de onde veio.

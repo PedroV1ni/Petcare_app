@@ -1,16 +1,24 @@
-// Resume materias com o Claude, a partir do texto real da pagina.
+// Resume materias a partir do texto real da pagina, usando a Groq.
 //
 // Regra que orienta este arquivo: so resume o que existe. Materia sem texto
 // acessivel nao vai para a IA - pedir um "resumo" a partir de um titulo seria
 // inventar conteudo, e num app de saude animal isso pode virar orientacao
 // errada sobre medicamento ou doenca.
+//
+// A Groq foi escolhida por ter camada gratuita. Em troca ha limite de
+// requisicoes: quando ele estoura, a chamada falha e o agregador mantem o
+// resumo que o proprio veiculo publicou. Nada quebra.
 
-import Anthropic from '@anthropic-ai/sdk';
+import Groq from 'groq-sdk';
 
 /** Sem chave configurada o agregador segue sem IA, em vez de falhar. */
 export function iaDisponivel() {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return Boolean(process.env.GROQ_API_KEY);
 }
+
+// Configuravel por variavel de ambiente: a Groq aposenta modelo com alguma
+// frequencia, e trocar o nome nao deveria exigir mexer no codigo.
+const MODELO = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
 const INSTRUCAO = `Voce resume noticias sobre cuidados com animais de estimacao
 para um aplicativo brasileiro chamado PetCare, lido por donos de pets.
@@ -23,8 +31,9 @@ Regras:
   local, quem pode participar.
 - Nao repita o titulo. Nao comece com "A materia" ou "O artigo".
 - Nao de conselho medico proprio: relate o que a materia diz.
-- Se o texto for curto demais, for so navegacao do site ou nao permitir um
-  resumo fiel, responda exatamente: SEM_RESUMO`;
+- Ignore menu, propaganda e cupom que aparecerem no texto.
+- Responda apenas com o resumo, sem introducao e sem aspas.
+- Se o texto nao permitir um resumo fiel, responda exatamente: SEM_RESUMO`;
 
 /**
  * Extrai o corpo da materia do HTML.
@@ -87,14 +96,14 @@ const MINIMO_DE_CARACTERES = 400;
 export async function resumir(cliente, titulo, texto) {
   if (!texto || texto.length < MINIMO_DE_CARACTERES) return null;
 
-  const resposta = await cliente.messages.create({
-    model: 'claude-opus-5',
-    max_tokens: 1000,
-    // Resumir texto curto e tarefa simples: effort baixo corta custo e
-    // latencia sem perder qualidade aqui.
-    output_config: { effort: 'low' },
-    system: INSTRUCAO,
+  const resposta = await cliente.chat.completions.create({
+    model: MODELO,
+    // Resumo curto: teto baixo evita resposta divagando e economiza cota.
+    max_tokens: 400,
+    // Temperatura baixa porque a tarefa e fidelidade ao texto, nao criacao.
+    temperature: 0.3,
     messages: [
+      { role: 'system', content: INSTRUCAO },
       {
         role: 'user',
         content: `Titulo: ${titulo}\n\nTexto da materia:\n${texto.slice(0, 12000)}`,
@@ -102,18 +111,14 @@ export async function resumir(cliente, titulo, texto) {
     ],
   });
 
-  if (resposta.stop_reason === 'refusal') return null;
+  const saida = (resposta.choices?.[0]?.message?.content || '').trim();
+  if (!saida || saida.includes('SEM_RESUMO')) return null;
 
-  const texto_saida = resposta.content
-    .filter((b) => b.type === 'text')
-    .map((b) => b.text)
-    .join(' ')
-    .trim();
-
-  if (!texto_saida || texto_saida.includes('SEM_RESUMO')) return null;
-  return texto_saida;
+  // Modelo aberto as vezes devolve o resumo entre aspas mesmo instruido a nao
+  // fazer isso; tirar aqui e mais barato que insistir no prompt.
+  return saida.replace(/^["']|["']$/g, '').trim();
 }
 
 export function criarCliente() {
-  return new Anthropic();
+  return new Groq({ apiKey: process.env.GROQ_API_KEY });
 }

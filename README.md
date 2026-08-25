@@ -79,6 +79,47 @@ keytool -list -v -keystore ~/petcare-release.jks -alias petcare
 E cadastre em Firebase Console → Configurações do projeto → Seus apps →
 Android → Adicionar impressão digital.
 
+## Notícias automáticas
+
+A aba Notícias não tem conteúdo escrito à mão: um job em
+[.github/workflows/noticias.yml](.github/workflows/noticias.yml) roda a cada 6
+horas, busca feeds RSS, filtra e publica na coleção `news` do Firestore. O app
+lê essa coleção como sempre leu.
+
+```bash
+cd tools/noticias
+npm install
+npm run simular   # mostra o que seria publicado, sem escrever nem exigir chave
+```
+
+Rodar `simular` antes de mexer nos filtros de
+[fontes.js](tools/noticias/fontes.js) evita descobrir problema só depois de
+publicar.
+
+### Segredos do repositório
+
+| Secret | Obrigatório | Para quê |
+|---|---|---|
+| `FIREBASE_SERVICE_ACCOUNT` | sim | Gravar no Firestore. É o JSON da conta de serviço, inteiro |
+| `GROQ_API_KEY` | não | Resumir as matérias por IA. Sem ela o job publica normalmente, usando o resumo do próprio veículo |
+
+Há ainda a variável opcional `GROQ_MODEL`, caso a Groq aposente o modelo padrão
+— dá para trocar sem mexer no código.
+
+### Por que só parte das notícias tem resumo
+
+Notícias vindas do Google Notícias chegam por um link de redirecionamento
+criptografado: não é possível alcançar a matéria para ler resumo, imagem de capa
+ou texto. Essas aparecem só com título, veículo e data.
+
+As de link direto trazem `og:description` e `og:image` — metadados que o próprio
+veículo publica para preview de link. Quando há chave da Groq, o resumo é
+refeito a partir do texto da matéria e o app marca **"Resumido por IA"**.
+
+**A IA nunca resume o que não pode ler.** Gerar um "resumo" a partir de um
+título seria inventar conteúdo, e num app sobre saúde animal isso pode virar
+orientação errada sobre medicamento ou doença.
+
 ## Planejamento
 
 ### Reconhecimento de raça por IA
