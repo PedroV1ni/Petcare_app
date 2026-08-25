@@ -90,7 +90,16 @@ class BreedDetailScreen extends StatelessWidget {
                     spacing: 8,
                     runSpacing: 4,
                     children: breed.temperament.map((t) => Chip(
-                          label: Text(t),
+                          // O cinza padrao do Material sobre ambar claro fica
+                          // com contraste fraco; marrom escuro resolve e
+                          // mantem a paleta da tela.
+                          label: Text(
+                            t,
+                            style: TextStyle(
+                              color: Colors.brown.shade900,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                           backgroundColor: Colors.amber.shade50,
                         )).toList(),
                   ),

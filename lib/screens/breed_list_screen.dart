@@ -66,7 +66,8 @@ class _BreedListScreenState extends State<BreedListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Raças')),
+      // Sem AppBar propria: o titulo 'Raças' ja vem do MainNavigation,
+      // mesma convencao de news_screen e care_screen.
       body: Column(
         children: [
           // Filtro espécie
