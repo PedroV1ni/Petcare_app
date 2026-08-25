@@ -14,15 +14,50 @@ class BreedDetailScreen extends StatelessWidget {
           SliverAppBar(
             expandedHeight: 240,
             pinned: true,
+            // Recolhida, a barra fica marrom: o branco do titulo e da seta
+            // continua legivel quando a foto sai de cena.
+            backgroundColor: Colors.brown,
+            foregroundColor: Colors.white,
+            iconTheme: const IconThemeData(color: Colors.white),
             flexibleSpace: FlexibleSpaceBar(
-              title: Text(breed.name),
-              background: Image.asset(
-                breed.image,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: Colors.brown.shade100,
-                  child: Icon(Icons.pets, size: 80, color: Colors.brown.shade300),
+              title: Text(
+                breed.name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  shadows: [
+                    Shadow(color: Colors.black87, blurRadius: 6, offset: Offset(0, 1)),
+                  ],
                 ),
+              ),
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(
+                    breed.image,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: Colors.brown.shade100,
+                      child: Icon(Icons.pets, size: 80, color: Colors.brown.shade300),
+                    ),
+                  ),
+                  // Escurece topo e base da foto para dar contraste a seta de
+                  // voltar e ao titulo, sem escurecer o meio da imagem.
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Color(0x8C000000),
+                          Color(0x00000000),
+                          Color(0xB3000000),
+                        ],
+                        stops: [0.0, 0.45, 1.0],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
