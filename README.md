@@ -37,27 +37,12 @@ flutter test
 
 ## Publicando
 
-Três passos precisam ser feitos antes de subir para a Play Store. Nenhum
-deles está pronto no repositório.
+Dois passos ainda faltam antes de subir para a Play Store.
 
-### 1. Trocar o `applicationId`
+O `applicationId` já é `br.com.pedrov1ni.petcare`, registrado no Firebase com
+o SHA-1 da chave de debug.
 
-Hoje é `com.example.petcare_app`, o placeholder do template do Flutter. A Play
-Store rejeita qualquer pacote começando com `com.example`.
-
-A ordem importa, porque o `google-services.json` é atrelado ao nome do pacote:
-
-1. No Firebase Console, adicione um **novo app Android** com o pacote
-   definitivo (ex.: `br.com.seudominio.petcare`)
-2. Baixe o `google-services.json` novo e substitua `android/app/google-services.json`
-3. Só então troque `applicationId` e `namespace` em `android/app/build.gradle.kts`
-4. Renomeie a pasta de `MainActivity.kt` em
-   `android/app/src/main/kotlin/` para refletir o novo pacote
-
-Trocar o `applicationId` antes do passo 1 quebra o app: o Firebase recusa a
-inicialização com `No matching client found for package name`.
-
-### 2. Criar a chave de assinatura
+### 1. Criar a chave de assinatura
 
 O Gradle já está configurado para usar uma chave de release quando
 `android/key.properties` existir, e cair na chave de debug quando não existir.
@@ -81,7 +66,7 @@ Esse arquivo e qualquer `.jks`/`.keystore` estão no `.gitignore`. **Nunca
 versione a chave nem as senhas** — perder a chave significa não conseguir mais
 publicar atualizações do app.
 
-### 3. Registrar o SHA-1 de release
+### 2. Registrar o SHA-1 de release
 
 O login com Google valida a assinatura do app. O SHA-1 cadastrado hoje no
 Firebase é o da chave de **debug**, então o login funciona no emulador mas
