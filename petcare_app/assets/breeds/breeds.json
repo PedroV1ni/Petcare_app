@@ -1,42 +1,200 @@
 [
   {
-    "name": "Golden Retriever",
-    "image": "assets/breeds/golden.jpg",
-    "description": "O Golden Retriever é conhecido por ser amigável, inteligente e confiável. Ótimo para famílias e excelente com crianças.",
-    "tips": [
-      "Precisa de exercícios diários e atividades mentais.",
-      "Escove os pelos semanalmente para evitar nós.",
-      "Alimente com ração de qualidade e evite sobrepeso."
-    ],
-    "curiosities": [
-      "É uma das raças mais populares do mundo.",
-      "Adora nadar e brincar na água."
-    ]
+    "name": "SRD (Vira-lata)",
+    "species": "dog",
+    "image": "assets/breeds/srd_dog.jpg",
+    "origin": "Brasil",
+    "size": "Variado",
+    "temperament": ["Leal", "Resistente", "Adaptável"],
+    "description": "O SRD brasileiro é sinônimo de saúde e resiliência. Cada um tem uma personalidade única — são companheiros incríveis e cheios de amor.",
+    "tips": ["Exige os cuidados básicos de qualquer cão.", "Geralmente mais resistente a doenças genéticas."],
+    "curiosities": ["São maioria dos cães no Brasil.", "Têm grande diversidade de tamanhos e pelagens."]
   },
   {
-    "name": "Siamês",
-    "image": "assets/breeds/siames.jpg",
-    "description": "O Siamês é um gato extrovertido, comunicativo e muito leal ao tutor. Conhecido pelo miado marcante e olhos azuis intensos.",
-    "tips": [
-      "Prefere companhia e pode sofrer se ficar muito tempo sozinho.",
-      "Cuidado com alimentação, pois pode ganhar peso fácil."
-    ],
-    "curiosities": [
-      "Originário da Tailândia (antigo Sião).",
-      "Seu pelo muda de cor conforme a temperatura do ambiente."
-    ]
+    "name": "Golden Retriever",
+    "species": "dog",
+    "image": "assets/breeds/golden.jpg",
+    "origin": "Escócia",
+    "size": "Grande",
+    "temperament": ["Amigável", "Confiável", "Inteligente", "Paciente"],
+    "description": "O Golden Retriever é conhecido por ser amigável, inteligente e confiável. Ótimo para famílias e excelente com crianças.",
+    "tips": ["Precisa de exercícios diários e atividades mentais.", "Escove os pelos semanalmente.", "Alimente com ração de qualidade e evite sobrepeso.", "Propenso a displasia de quadril — check-ups regulares."],
+    "curiosities": ["É uma das raças mais populares do mundo.", "Adora nadar e brincar na água.", "Foi criado para recuperar caça em terrenos úmidos."]
+  },
+  {
+    "name": "Labrador Retriever",
+    "species": "dog",
+    "image": "assets/breeds/labrador.jpg",
+    "origin": "Canadá",
+    "size": "Grande",
+    "temperament": ["Dócil", "Ativo", "Amigável", "Obediente"],
+    "description": "Labrador é a raça mais popular do mundo há décadas. Extremamente versátil: é cão-guia, farejador e mascote de família ao mesmo tempo.",
+    "tips": ["Come muito rápido — use comedouro lento.", "Necessita de exercícios diários para não engordar.", "Ótimos para treinamento de obediência."],
+    "curiosities": ["Originalmente auxiliavam pescadores no Canadá.", "Existem nas cores preta, amarela e chocolate."]
+  },
+  {
+    "name": "Poodle",
+    "species": "dog",
+    "image": "assets/breeds/poodle.jpg",
+    "origin": "França / Alemanha",
+    "size": "Pequeno a Grande",
+    "temperament": ["Inteligente", "Ativo", "Elegante", "Fiel"],
+    "description": "O Poodle é considerado uma das raças mais inteligentes do mundo. Existe nos tamanhos miniatura, médio e grande.",
+    "tips": ["Pelo hipoalergênico mas exige tosa regular.", "Precisa de estímulo mental além do físico.", "Aprende comandos muito rapidamente."],
+    "curiosities": ["Originalmente eram cães de caça aquática.", "Foram os favoritos da nobreza europeia no séc. XVIII."]
+  },
+  {
+    "name": "Bulldog Francês",
+    "species": "dog",
+    "image": "assets/breeds/bulldog_frances.jpg",
+    "origin": "França",
+    "size": "Pequeno",
+    "temperament": ["Calmo", "Alerta", "Adaptável", "Brincalhão"],
+    "description": "O Bulldog Francês é perfeito para apartamento. Afetivo e pouco ladrador, se dá bem com crianças e outros pets.",
+    "tips": ["Evite exercícios intensos no calor — focinho curto dificulta respiração.", "Limpe as dobrinhas do rosto diariamente.", "Pode ter problemas respiratórios — atenção ao veterinário."],
+    "curiosities": ["Surgiu do cruzamento de Bulldogs ingleses com ratoleiros parisienses.", "É uma das raças mais populares nos EUA e Europa."]
+  },
+  {
+    "name": "Beagle",
+    "species": "dog",
+    "image": "assets/breeds/beagle.jpg",
+    "origin": "Inglaterra",
+    "size": "Médio",
+    "temperament": ["Curioso", "Animado", "Determinado", "Sociável"],
+    "description": "O Beagle é movido pelo faro — um dos melhores narizes do mundo canino. Alegre e teimoso, precisa de exercícios e enriquecimento olfativo.",
+    "tips": ["Nunca solte sem guia — o faro pode levá-lo longe.", "Precisa de estimulação diária.", "Pode latir e uivar bastante sem treino."],
+    "curiosities": ["Muito usado em aeroportos para farejar bagagens.", "Era usado em caçadas de coelhos na Inglaterra."]
   },
   {
     "name": "Pug",
+    "species": "dog",
     "image": "assets/breeds/pug.jpg",
-    "description": "O Pug é carinhoso, sociável e ótimo para quem mora em apartamento. Seu focinho curto requer atenção extra para respiração.",
-    "tips": [
-      "Evite exercícios em horários quentes.",
-      "Limpe as dobrinhas do rosto para evitar infecções."
-    ],
-    "curiosities": [
-      "Muito usado como cão de companhia na China imperial.",
-      "Ronca e faz barulhos engraçados ao dormir."
-    ]
+    "origin": "China",
+    "size": "Pequeno",
+    "temperament": ["Carinhoso", "Sociável", "Brincalhão", "Teimoso"],
+    "description": "O Pug é carinhoso e sociável, ótimo para quem mora em apartamento. Seu focinho curto requer atenção extra para respiração.",
+    "tips": ["Evite exercícios em horários quentes.", "Limpe as dobrinhas do rosto para evitar infecções.", "Controle o peso — obeso fica mais fácil."],
+    "curiosities": ["Muito usado como cão de companhia na China imperial.", "Ronca e faz barulhos engraçados ao dormir."]
+  },
+  {
+    "name": "Shih Tzu",
+    "species": "dog",
+    "image": "assets/breeds/shih_tzu.jpg",
+    "origin": "China / Tibet",
+    "size": "Pequeno",
+    "temperament": ["Afetivo", "Brincalhão", "Independente", "Gentil"],
+    "description": "O Shih Tzu é um cão de companhia por excelência. Pelo longo e olhos expressivos tornam-no inconfundível. Ótimo para idosos e crianças.",
+    "tips": ["Pelo exige escovação diária.", "Cuidado com os olhos — pelos podem irritar.", "Prefere o interior, suporta mal calor."],
+    "curiosities": ["Nome significa 'cão-leão' em mandarim.", "Era cão sagrado nas cortes imperiais chinesas."]
+  },
+  {
+    "name": "Border Collie",
+    "species": "dog",
+    "image": "assets/breeds/border_collie.jpg",
+    "origin": "Grã-Bretanha",
+    "size": "Médio",
+    "temperament": ["Inteligente", "Energético", "Ágil", "Trabalhador"],
+    "description": "Considerada a raça mais inteligente do mundo. Precisa de muito estímulo mental e físico — não é para donos sedentários.",
+    "tips": ["Necessita de pelo menos 2h de exercícios por dia.", "Enriquecimento mental é obrigatório (jogos, agility).", "Sem estimulação, pode desenvolver comportamentos destrutivos."],
+    "curiosities": ["Aprendem novas palavras com poucas repetições.", "Campeões mundiais em Frisbee e agility."]
+  },
+  {
+    "name": "Yorkshire Terrier",
+    "species": "dog",
+    "image": "assets/breeds/yorkshire.jpg",
+    "origin": "Inglaterra",
+    "size": "Pequeno",
+    "temperament": ["Corajoso", "Inteligente", "Independente", "Afetuoso"],
+    "description": "O Yorkshire é pequeno, mas não sabe disso. Personalidade forte, curioso e muito corajoso para o tamanho.",
+    "tips": ["Pelo longo exige cuidados diários ou tosa regular.", "Pode ser teimoso no treinamento.", "Frágil — cuidado com crianças muito pequenas."],
+    "curiosities": ["Originalmente criado para caçar ratos em minas de carvão.", "Pelo contínuo em crescimento, semelhante a cabelo humano."]
+  },
+  {
+    "name": "Husky Siberiano",
+    "species": "dog",
+    "image": "assets/breeds/husky.jpg",
+    "origin": "Sibéria",
+    "size": "Grande",
+    "temperament": ["Amigável", "Energético", "Independente", "Inteligente"],
+    "description": "O Husky Siberiano impressiona pelos olhos azuis e resistência ao frio. É um corredor nato — precisa de muito espaço e exercício.",
+    "tips": ["Perde muito pelo nas mudanças de estação.", "Precisa de exercício intenso diário.", "Não é bom guardião — muito amigável com estranhos."],
+    "curiosities": ["Foi criado pelos Chukchi para puxar trenós a longas distâncias.", "Suporta temperaturas de -60°C."]
+  },
+  {
+    "name": "Dachshund (Salsicha)",
+    "species": "dog",
+    "image": "assets/breeds/dachshund.jpg",
+    "origin": "Alemanha",
+    "size": "Pequeno",
+    "temperament": ["Curioso", "Bravo", "Devoto", "Espirituoso"],
+    "description": "O Dachshund tem corpo comprido, patas curtas e personalidade gigante. Teimoso, mas extremamente leal ao dono.",
+    "tips": ["Não deixe pular de alturas — coluna frágil.", "Controle o peso para proteger a espinha.", "Precisa de exercícios moderados diariamente."],
+    "curiosities": ["Nome significa 'cão-texugo' em alemão.", "Existem nas versões pelo curto, longo e duro."]
+  },
+  {
+    "name": "SRD (Vira-lata)",
+    "species": "cat",
+    "image": "assets/breeds/srd_cat.jpg",
+    "origin": "Brasil",
+    "size": "Variado",
+    "temperament": ["Independente", "Adaptável", "Resistente"],
+    "description": "O gato SRD brasileiro é cheio de saúde e personalidade. Cada um tem uma história única e são companheiros maravilhosos.",
+    "tips": ["Necessita dos cuidados básicos de qualquer gato.", "Geralmente mais resistente a doenças hereditárias."],
+    "curiosities": ["São a maioria dos gatos domésticos no Brasil.", "Exibem pelagens e padrões infinitos."]
+  },
+  {
+    "name": "Siamês",
+    "species": "cat",
+    "image": "assets/breeds/siames.jpg",
+    "origin": "Tailândia",
+    "size": "Médio",
+    "temperament": ["Comunicativo", "Leal", "Extrovertido", "Curioso"],
+    "description": "O Siamês é extrovertido, comunicativo e muito leal ao tutor. Conhecido pelo miado marcante e olhos azuis intensos.",
+    "tips": ["Prefere companhia — pode sofrer sozinho por muito tempo.", "Cuidado com a alimentação, pois tende a engordar.", "Necessita de estimulação e brinquedos."],
+    "curiosities": ["Originário da Tailândia (antigo Sião).", "O pelo muda de cor conforme a temperatura do ambiente."]
+  },
+  {
+    "name": "Persa",
+    "species": "cat",
+    "image": "assets/breeds/persa.jpg",
+    "origin": "Pérsia (Irã)",
+    "size": "Médio a Grande",
+    "temperament": ["Calmo", "Quieto", "Afetivo", "Reservado"],
+    "description": "O Persa é o gato mais requintado das raças. Pelo abundante, focinho achatado e temperamento sereno tornam-no ideal para apartamentos.",
+    "tips": ["Pelo exige escovação diária para evitar nós.", "Focinho achatado pode causar problemas respiratórios.", "Não é muito ativo — prefere ambientes tranquilos."],
+    "curiosities": ["Uma das raças mais antigas do mundo.", "Foi muito popular na realeza europeia."]
+  },
+  {
+    "name": "Maine Coon",
+    "species": "cat",
+    "image": "assets/breeds/maine_coon.jpg",
+    "origin": "Estados Unidos",
+    "size": "Grande",
+    "temperament": ["Gentil", "Sociável", "Brincalhão", "Inteligente"],
+    "description": "O Maine Coon é o maior gato doméstico. Gentil como um cão, adora brincar com água e se dá muito bem com crianças.",
+    "tips": ["Precisa de espaço para se mover.", "Escovação semanal do pelo semi-longo.", "Adora brinquedos interativos."],
+    "curiosities": ["É chamado de 'o cão dos gatos' pelo comportamento.", "Pode pesar até 11 kg."]
+  },
+  {
+    "name": "Bengal",
+    "species": "cat",
+    "image": "assets/breeds/bengal.jpg",
+    "origin": "Estados Unidos",
+    "size": "Médio a Grande",
+    "temperament": ["Ativo", "Curioso", "Atlético", "Vocal"],
+    "description": "O Bengal parece um leopardo em miniatura. Altamente ativo e curioso, é ideal para quem quer um gato dinâmico e interativo.",
+    "tips": ["Precisa de muito enriquecimento ambiental.", "Adora altura — instale prateleiras e árvore para gatos.", "Gosta de água — pode brincar com a torneira."],
+    "curiosities": ["Cruzamento de gato-leopardo asiático com gatos domésticos.", "Pelo com padrão de rosetas semelhante a leopardos."]
+  },
+  {
+    "name": "Ragdoll",
+    "species": "cat",
+    "image": "assets/breeds/ragdoll.jpg",
+    "origin": "Estados Unidos",
+    "size": "Grande",
+    "temperament": ["Dócil", "Tranquilo", "Afetivo", "Paciente"],
+    "description": "O Ragdoll fica flácido como uma boneca de pano quando pego no colo — daí o nome. É extremamente dócil e excelente para famílias.",
+    "tips": ["Pelo semi-longo precisa de escovação regular.", "Não tem forte instinto de defesa — mantenha dentro de casa.", "Adora colo e interação com humanos."],
+    "curiosities": ["Nome vem do hábito de relaxar completamente nos braços.", "Olhos sempre azuis, independente da pelagem."]
   }
 ]

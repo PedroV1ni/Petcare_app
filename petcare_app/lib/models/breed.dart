@@ -1,31 +1,35 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class Breed {
-  final String id;
   final String name;
+  final String species; // 'dog' | 'cat'
+  final String image;
+  final String origin;
+  final String size;
+  final List<String> temperament;
   final String description;
-  final String origin;              // novo
-  final String size;                // novo
-  final List<String> temperament;   // novo
+  final List<String> tips;
+  final List<String> curiosities;
 
   Breed({
-    required this.id,
     required this.name,
-    required this.description,
+    required this.species,
+    required this.image,
     required this.origin,
     required this.size,
     required this.temperament,
+    required this.description,
+    required this.tips,
+    required this.curiosities,
   });
 
-  factory Breed.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data()! as Map<String, dynamic>;
-    return Breed(
-      id: doc.id,
-      name: data['name'] ?? '',
-      description: data['description'] ?? '',
-      origin: data['origin'] ?? '',
-      size: data['size'] ?? '',
-      temperament: List<String>.from(data['temperament'] ?? []),
-    );
-  }
+  factory Breed.fromJson(Map<String, dynamic> json) => Breed(
+        name: json['name'] ?? '',
+        species: json['species'] ?? 'dog',
+        image: json['image'] ?? '',
+        origin: json['origin'] ?? '',
+        size: json['size'] ?? '',
+        temperament: List<String>.from(json['temperament'] ?? []),
+        description: json['description'] ?? '',
+        tips: List<String>.from(json['tips'] ?? []),
+        curiosities: List<String>.from(json['curiosities'] ?? []),
+      );
 }
