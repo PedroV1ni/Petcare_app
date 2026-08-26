@@ -117,3 +117,18 @@ test('acento e caixa nao mudam a conferencia', () => {
   assert.ok(dicaEhAutossuficiente('Escove os dentes do CÃO duas vezes por semana'));
   assert.equal(dicaEhAutossuficiente('Grave O EPISÓDIO e mostre'), false);
 });
+
+test('dica cortada no meio e recusada', () => {
+  // Caso real da versao 3: cabia nos 90 caracteres, mas nao diz quem consultar.
+  assert.equal(
+    dicaEhAutossuficiente('Observe se o cachorro tem febre ou dor e consulte'),
+    false,
+  );
+  assert.equal(dicaEhAutossuficiente('Leve o gato ao veterinario se ele parar de comer e'), false);
+  assert.equal(dicaEhAutossuficiente('Escove os dentes do cao com'), false);
+});
+
+test('frase inteira e terminada passa', () => {
+  assert.ok(dicaEhAutossuficiente('Observe se o cachorro tem febre e leve ao veterinario.'));
+  assert.ok(dicaEhAutossuficiente('Escove os dentes do cao duas vezes por semana.'));
+});

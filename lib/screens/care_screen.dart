@@ -97,7 +97,7 @@ class CareScreen extends StatelessWidget {
       children: [
         _titulo('Dicas rápidas', explicacao: 'Tiradas das matérias abaixo'),
         SizedBox(
-          height: 132,
+          height: 152,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -118,7 +118,7 @@ class CareScreen extends StatelessWidget {
         MaterialPageRoute(builder: (_) => NewsDetailScreen(news: guia)),
       ),
       child: Container(
-        width: 210,
+        width: 230,
         padding: const EdgeInsets.fromLTRB(14, 13, 14, 11),
         decoration: BoxDecoration(
           color: Colors.brown.shade50,
@@ -133,7 +133,7 @@ class CareScreen extends StatelessWidget {
             Expanded(
               child: Text(
                 guia.dica,
-                maxLines: 3,
+                maxLines: 4,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 13.5,

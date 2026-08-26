@@ -57,7 +57,7 @@ class DicasRapidas extends StatelessWidget {
         if (comDica.isEmpty) {
           final reserva = _daOrdemDoDia(_reserva);
           return SizedBox(
-            height: 92,
+            height: 116,
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: reserva.map(_cartaoSimples).toList(),
@@ -67,7 +67,7 @@ class DicasRapidas extends StatelessWidget {
 
         final dicas = _daOrdemDoDia(comDica);
         return SizedBox(
-          height: 92,
+          height: 116,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: dicas.length,
@@ -80,7 +80,7 @@ class DicasRapidas extends StatelessWidget {
 
   Widget _molde({required Widget filho, VoidCallback? aoTocar}) {
     return Container(
-      width: 186,
+      width: 210,
       margin: const EdgeInsets.only(right: 12),
       child: Card(
         color: Colors.amber.shade50,
@@ -116,7 +116,7 @@ class DicasRapidas extends StatelessWidget {
           Expanded(
             child: Text(
               guia.dica,
-              maxLines: 3,
+              maxLines: 4,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 13, height: 1.3),
             ),

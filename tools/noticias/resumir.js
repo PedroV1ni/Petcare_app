@@ -112,8 +112,21 @@ Regras:
  *    ainda nao diz de que animal se fala nem que aquilo acontece durante o
  *    sono. Nesta versao a exigencia do animal tambem e conferida no codigo,
  *    porque regra no prompt e pedido, nao garantia.
+ * 4: deu espaco para a frase caber. A versao 3 exigia animal, situacao e acao
+ *    em 90 caracteres, e o modelo passou a cortar a frase para obedecer:
+ *    "Observe se o cachorro tem febre ou dor e consulte", sem dizer quem
+ *    consultar. Teto maior, frase completa exigida e conferida no codigo.
  */
-export const VERSAO_DA_DICA = 3;
+export const VERSAO_DA_DICA = 4;
+
+/**
+ * Teto de caracteres da dica.
+ *
+ * Amarrado ao cartao que a mostra: sao quatro linhas de ~28 caracteres na aba
+ * Cuidados. Passar disso nao daria uma dica mais completa, daria uma dica
+ * cortada com reticencias na tela.
+ */
+const LIMITE_DA_DICA = 105;
 
 /**
  * Instrucao extra para guia de cuidado, que rende uma dica alem do resumo.
@@ -130,7 +143,11 @@ Depois do resumo, escreva uma linha comecando com "DICA:" contendo uma acao
 pratica que o dono possa adotar, tirada do texto.
 
 Regras da dica:
-- No maximo 90 caracteres, no imperativo, em portugues do Brasil.
+- Uma frase completa, no imperativo, em portugues do Brasil, terminada em
+  ponto final. NUNCA corte a frase no meio para caber no limite: se nao
+  couber, tire um detalhe e mantenha a frase inteira. "Observe se o cachorro
+  tem febre ou dor e consulte" nao serve - ficou faltando dizer quem consultar.
+- No maximo ${LIMITE_DA_DICA} caracteres, contando o ponto final.
 - Ela sera lida sozinha, na tela inicial, por quem nao abriu a materia. Quem
   ler tem de conseguir dizer DE QUE ANIMAL se trata, O QUE observar ou fazer e
   EM QUE SITUACAO - sem nada disso ficar subentendido.
@@ -143,7 +160,7 @@ Regras da dica:
   "isso". Nomear so o fenomeno tambem nao basta.
   Ruim:    "Grave o episodio e mostre ao veterinario"
   Ruim:    "Grave o episodio de movimento intenso e mostre ao veterinario"
-  Bom:     "Filme o cao se ele se mexer muito dormindo e mostre ao veterinario"
+  Bom:     "Filme o cao se ele se mexer muito dormindo e mostre ao veterinario."
 - Pode falar de observacao, prevencao, higiene, rotina e de quando procurar
   um veterinario.
 - Nao pode indicar medicamento, dose, frequencia de administracao nem
@@ -183,7 +200,24 @@ const VAGO =
  */
 export function dicaEhAutossuficiente(dica) {
   const t = semAcento(dica);
-  return ANIMAIS.test(t) && !VAGO.test(t);
+  return ANIMAIS.test(t) && !VAGO.test(t) && terminaAFrase(dica);
+}
+
+/**
+ * Frase cortada no meio nao vira dica.
+ *
+ * Exigir o ponto final e o jeito barato de pegar isso: quando o modelo corta a
+ * frase para caber no limite, ele para em cima de uma palavra e nao pontua.
+ * Nao pega tudo - ele pode pontuar uma frase incompleta -, mas pegou o caso
+ * real da versao 3 e nao custa nada.
+ */
+function terminaAFrase(dica) {
+  const fim = dica.trim();
+  if (!/[.!?]$/.test(fim)) return false;
+
+  // Palavra que exige continuacao: se a frase acaba nela, faltou o resto.
+  const ultima = semAcento(fim).replace(/[.!?]+$/, '').split(/\s+/).pop();
+  return !/^(e|ou|que|se|com|sem|para|por|de|do|da|no|na|ao|a|em|ate|como)$/.test(ultima);
 }
 
 /** Separa o resumo da dica na resposta de duas partes. */
@@ -348,11 +382,11 @@ export async function resumir(cliente, titulo, texto, { querDica = false } = {})
 
   // Dica longa demais foi o modelo ignorando o limite: cortar no meio da frase
   // deixaria um conselho pela metade, entao ela e descartada inteira.
-  const cabe = dica && dica.length <= 110;
+  const cabe = dica && dica.length <= LIMITE_DA_DICA;
   const aprovada = cabe && dicaEhAutossuficiente(dica);
 
   if (cabe && !aprovada) {
-    console.log(`  [dica recusada] nao diz de quem fala: "${dica}"`);
+    console.log(`  [dica recusada] vaga ou incompleta: "${dica}"`);
   }
 
   return {
