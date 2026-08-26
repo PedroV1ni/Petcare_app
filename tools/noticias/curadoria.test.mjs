@@ -11,6 +11,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { classificar, ehSobrePets, motivoDeDescarte } from './agregar.js';
+import { dicaEhAutossuficiente } from './resumir.js';
 
 test('nome da fonte nao faz o item parecer sobre pet', () => {
   assert.equal(ehSobrePets('Como limpar piscina verde: passo a passo | Petz'), false);
@@ -92,4 +93,27 @@ test('noticia que muda a vida do dono continua passando', () => {
     null,
   );
   assert.equal(motivoDeDescarte('Atendimento medico-veterinario domiciliar'), null);
+});
+
+test('dica que nao diz de quem fala e recusada', () => {
+  // Casos reais das versoes 1 e 2 das regras, nesta ordem.
+  assert.equal(dicaEhAutossuficiente('Grave o episodio e mostre ao veterinario'), false);
+  assert.equal(
+    dicaEhAutossuficiente('Grave o episodio de movimento intenso e mostre ao veterinario'),
+    false,
+  );
+  assert.equal(dicaEhAutossuficiente('Fique atento a isso no dia a dia'), false);
+  assert.equal(dicaEhAutossuficiente('Observe o comportamento e procure ajuda'), false);
+});
+
+test('dica que nomeia animal e situacao passa', () => {
+  assert.ok(dicaEhAutossuficiente('Filme o cao se ele se mexer muito dormindo'));
+  assert.ok(dicaEhAutossuficiente('Observe se a caspa do cachorro vem com coceira'));
+  assert.ok(dicaEhAutossuficiente('Ofereca esconderijos ao gato para enriquecer o ambiente'));
+  assert.ok(dicaEhAutossuficiente('Consulte o veterinario antes de dar dipirona ao seu cao'));
+});
+
+test('acento e caixa nao mudam a conferencia', () => {
+  assert.ok(dicaEhAutossuficiente('Escove os dentes do CÃO duas vezes por semana'));
+  assert.equal(dicaEhAutossuficiente('Grave O EPISÓDIO e mostre'), false);
 });

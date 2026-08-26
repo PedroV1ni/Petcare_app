@@ -107,8 +107,13 @@ Regras:
  * 2: passou a proibir referencia a algo que so existe na materia. A versao 1
  *    rendeu "Grave o episodio e mostre ao veterinario", que na tela inicial
  *    nao diz de que episodio se trata.
+ * 3: passou a exigir o animal e a situacao. A versao 2 melhorou a mesma dica
+ *    para "Grave o episodio de movimento intenso e mostre ao veterinario", que
+ *    ainda nao diz de que animal se fala nem que aquilo acontece durante o
+ *    sono. Nesta versao a exigencia do animal tambem e conferida no codigo,
+ *    porque regra no prompt e pedido, nao garantia.
  */
-export const VERSAO_DA_DICA = 2;
+export const VERSAO_DA_DICA = 3;
 
 /**
  * Instrucao extra para guia de cuidado, que rende uma dica alem do resumo.
@@ -126,22 +131,60 @@ pratica que o dono possa adotar, tirada do texto.
 
 Regras da dica:
 - No maximo 90 caracteres, no imperativo, em portugues do Brasil.
-- Ela sera lida sozinha, fora da materia: precisa fazer sentido isolada.
-- Nomeie o assunto dentro da propria dica. Nao escreva "o episodio", "o
-  problema", "essa condicao", "isso" nem nada que so se entenda tendo lido a
-  materia. "Grave o episodio e mostre ao veterinario" nao serve, porque quem
-  le na tela inicial nao sabe de que episodio se trata; "Filme a convulsao do
-  cao e mostre ao veterinario" serve.
+- Ela sera lida sozinha, na tela inicial, por quem nao abriu a materia. Quem
+  ler tem de conseguir dizer DE QUE ANIMAL se trata, O QUE observar ou fazer e
+  EM QUE SITUACAO - sem nada disso ficar subentendido.
+- Diga o animal com todas as letras: "cao", "cachorro", "gato", "filhote".
+  Nao basta "pet" nem "o animal" quando a materia fala de uma especie so.
+- Situe quando aquilo se aplica: "durante o sono", "depois do banho", "no
+  verao", "em filhotes". Dica solta no tempo nao ajuda ninguem.
+- Proibido usar palavra generica no lugar do assunto: "o episodio", "o
+  problema", "o quadro", "essa condicao", "o fenomeno", "o comportamento",
+  "isso". Nomear so o fenomeno tambem nao basta.
+  Ruim:    "Grave o episodio e mostre ao veterinario"
+  Ruim:    "Grave o episodio de movimento intenso e mostre ao veterinario"
+  Bom:     "Filme o cao se ele se mexer muito dormindo e mostre ao veterinario"
 - Pode falar de observacao, prevencao, higiene, rotina e de quando procurar
   um veterinario.
 - Nao pode indicar medicamento, dose, frequencia de administracao nem
   tratamento. Se a materia for principalmente sobre isso, escreva
   exatamente: DICA: SEM_DICA
 - Nao invente nada que nao esteja no texto.
+- Na duvida entre uma dica vaga e nenhuma, escreva: DICA: SEM_DICA
 
 Formato da resposta, exatamente em duas partes:
 <resumo>
 DICA: <dica>`;
+
+/** Sem acento e em minuscula, para as conferencias abaixo. */
+function semAcento(texto) {
+  return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+/** De quem a dica fala. Sem um destes, nao da para saber a quem ela se aplica. */
+const ANIMAIS =
+  /\b(cao|caes|cachorr\w*|cadela|gat\w*|felin\w*|canin\w*|filhote\w*|pet|pets|animal|animais)\b/;
+
+/**
+ * Palavra generica ocupando o lugar do assunto. Quem le na tela inicial nao
+ * tem a materia na frente, entao "o episodio" nao se refere a nada.
+ */
+const VAGO =
+  /\b(o|esse|este|essa|esta)\s+(episodio|problema|quadro|fenomeno|comportamento|condicao|situacao|sintoma|caso)\b|\bisso\b/;
+
+/**
+ * Confere se a dica se sustenta sozinha.
+ *
+ * A mesma exigencia esta no prompt, mas prompt e pedido, nao garantia: a
+ * versao anterior pedia para nomear o assunto e ainda assim rendeu "Grave o
+ * episodio de movimento intenso". Aqui a dica que nao passa e descartada, e o
+ * guia simplesmente fica sem dica - preferivel a uma frase que nao diz de quem
+ * esta falando.
+ */
+export function dicaEhAutossuficiente(dica) {
+  const t = semAcento(dica);
+  return ANIMAIS.test(t) && !VAGO.test(t);
+}
 
 /** Separa o resumo da dica na resposta de duas partes. */
 function separarResumoEDica(saida) {
@@ -303,13 +346,20 @@ export async function resumir(cliente, titulo, texto, { querDica = false } = {})
   const { resumo, dica } = separarResumoEDica(saida);
   if (!resumo || resumo.includes('SEM_RESUMO')) return null;
 
+  // Dica longa demais foi o modelo ignorando o limite: cortar no meio da frase
+  // deixaria um conselho pela metade, entao ela e descartada inteira.
+  const cabe = dica && dica.length <= 110;
+  const aprovada = cabe && dicaEhAutossuficiente(dica);
+
+  if (cabe && !aprovada) {
+    console.log(`  [dica recusada] nao diz de quem fala: "${dica}"`);
+  }
+
   return {
     // Modelo aberto as vezes devolve o resumo entre aspas mesmo instruido a
     // nao fazer isso; tirar aqui e mais barato que insistir no prompt.
     resumo: resumo.replace(/^["']|["']$/g, '').trim(),
-    // Dica longa demais foi o modelo ignorando o limite: cortar no meio da
-    // frase deixaria um conselho pela metade, entao ela e descartada.
-    dica: dica && dica.length <= 110 ? dica : null,
+    dica: aprovada ? dica : null,
   };
 }
 
