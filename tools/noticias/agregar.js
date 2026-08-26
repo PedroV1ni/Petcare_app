@@ -400,8 +400,17 @@ async function carregarResumosJaFeitos(db) {
   for (const doc of docs.docs) {
     const d = doc.data();
     // A dica sai da mesma chamada que o resumo, entao e reaproveitada junto.
+    //
+    // `dicaAvaliada` distingue "ainda nao passou pela IA pedindo dica" de
+    // "passou e ela recusou". Sem essa diferenca, guia sobre tratamento -
+    // que nunca rende dica, de proposito - voltaria para a IA em toda
+    // execucao, para sempre, recebendo a mesma recusa.
     if (d.aiSummary && d.description) {
-      mapa.set(doc.id, { resumo: d.description, dica: d.dica || null });
+      mapa.set(doc.id, {
+        resumo: d.description,
+        dica: d.dica || null,
+        dicaAvaliada: d.dicaAvaliada === true,
+      });
     }
   }
   return mapa;
@@ -440,6 +449,9 @@ async function publicar(db, noticias) {
       // Acao pratica tirada do texto do guia. So existe em tipo 'cuidado', e
       // so quando a materia nao e sobre tratamento.
       dica: n.dica || '',
+      // Marca que a IA ja foi consultada sobre a dica desta materia, para uma
+      // recusa nao virar nova tentativa a cada execucao.
+      dicaAvaliada: n.dicaAvaliada === true,
     });
   }
   await lote.commit();
@@ -562,24 +574,29 @@ ${aprovados.length} aprovados, ${descartados.length} descartados, ${candidatas.l
 
       // Materia ja resumida antes: reusa. Sem isso o job pagaria de novo pelo
       // mesmo resumo a cada 6 horas, e as fontes publicam uma vez por dia.
+      // So guia rende dica: ela aparece na aba Cuidados, e noticia datada nao
+      // vira conselho pratico.
+      const querDica = noticias[i].tipo === 'cuidado';
+
       const anterior = jaFeitos.get(idDoDocumento(noticias[i].link));
-      if (anterior) {
+      // Guia resumido antes de a dica existir precisa passar pela IA de novo,
+      // uma vez, senao o resumo em cache o impediria de ganhar dica para
+      // sempre. A partir dai o cache volta a valer.
+      if (anterior && (!querDica || anterior.dicaAvaliada)) {
         noticias[i].descricao = anterior.resumo;
         noticias[i].dica = anterior.dica;
+        noticias[i].dicaAvaliada = anterior.dicaAvaliada;
         noticias[i].resumoPorIA = true;
         reaproveitadas++;
         continue;
       }
 
       try {
-        // So guia rende dica: ela aparece na aba Cuidados, e noticia datada
-        // nao vira conselho pratico.
-        const saida = await resumir(cliente, noticias[i].titulo, texto, {
-          querDica: noticias[i].tipo === 'cuidado',
-        });
+        const saida = await resumir(cliente, noticias[i].titulo, texto, { querDica });
         if (saida) {
           noticias[i].descricao = saida.resumo;
           noticias[i].dica = saida.dica;
+          noticias[i].dicaAvaliada = querDica;
           noticias[i].resumoPorIA = true;
           resumidas++;
         }
