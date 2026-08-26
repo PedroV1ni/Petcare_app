@@ -152,6 +152,23 @@ a partir do texto da matéria e o app marca **"Resumido por IA"**.
 título seria inventar conteúdo, e num app sobre saúde animal isso pode virar
 orientação errada sobre medicamento ou doença.
 
+### Dicas rápidas
+
+A aba Cuidados abre com dicas curtas, e cada uma sai do texto de uma matéria
+real — tocar nela abre o guia de onde veio, e o veículo aparece no próprio
+cartão. Antes essas dicas eram digitadas dentro do app.
+
+A dica sai da mesma chamada da IA que gera o resumo. Pedir separado dobraria as
+chamadas, e o limite da camada gratuita é por minuto.
+
+**O que a dica pode dizer é mais estreito que o resumo**, porque ela é lida
+fora do contexto da matéria: observação, prevenção, higiene, rotina e quando
+procurar um veterinário. Medicamento, dose e tratamento ficam de fora — "1 gota
+por quilo" lido solto, sem a parte de que só vale com prescrição, vira
+instrução de automedicação. Matéria sobre tratamento simplesmente não rende
+dica, e o campo `dicaAvaliada` registra que a IA já foi consultada, para a
+recusa não virar nova tentativa a cada execução.
+
 ### Ordem e validade
 
 A lista vai da mais recente para a mais antiga, e a janela desejada é de 15
