@@ -8,6 +8,7 @@ import '../models/reminder_model.dart';
 import '../models/pet_model.dart';
 import '../utils/pet_image_widget.dart';
 import '../utils/app_widgets.dart';
+import '../widgets/dicas_rapidas.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -85,18 +86,7 @@ class HomeScreen extends StatelessWidget {
             const Text('Dicas Rápidas',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            SizedBox(
-              height: 80,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: const [
-                  _TipCard('Escove o pelo regularmente'),
-                  _TipCard('Ofereça água fresca sempre'),
-                  _TipCard('Passeie pelo menos 30 min hoje'),
-                  _TipCard('Verifique as vacinas em dia'),
-                ],
-              ),
-            ),
+            DicasRapidas(),
 
             const SizedBox(height: 16),
 
@@ -251,26 +241,6 @@ class HomeScreen extends StatelessWidget {
               child: const Text('Salvar'),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TipCard extends StatelessWidget {
-  final String text;
-  const _TipCard(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 180,
-      margin: const EdgeInsets.only(right: 12),
-      child: Card(
-        color: Colors.amber.shade50,
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Text(text, style: const TextStyle(fontSize: 13)),
         ),
       ),
     );
