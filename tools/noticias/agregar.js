@@ -14,6 +14,7 @@ import {
   escolherModelo,
   extrairTexto,
   iaDisponivel,
+  relatarFalhas,
   resumir,
   VERSAO_DA_DICA,
 } from './resumir.js';
@@ -615,6 +616,7 @@ ${aprovados.length} aprovados, ${descartados.length} descartados, ${candidatas.l
         console.error(`  falhou em "${noticias[i].titulo.slice(0, 45)}": ${erro.message}`);
       }
     }
+    relatarFalhas();
     const comDica = noticias.filter((n) => n.dica).length;
     console.log(`  ${resumidas} novas resumidas, ${reaproveitadas} reaproveitadas, ${semTexto} sem texto acessivel.`);
     console.log(`  ${comDica} guias renderam dica pratica.\n`);

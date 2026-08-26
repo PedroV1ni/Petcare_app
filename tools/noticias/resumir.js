@@ -48,10 +48,23 @@ const RACIOCINIO = /qwen3|reasoning|-r1|thinking|deepseek/i;
 let modeloEscolhido = null;
 
 /**
- * O primeiro resumo vazio de cada execucao imprime o diagnostico completo.
- * So o primeiro: repetir dez vezes a mesma causa so polui o log.
+ * O primeiro resumo vazio de cada execucao imprime a resposta bruta; os
+ * demais so entram na contagem por motivo, impressa no fim.
+ *
+ * Antes so o primeiro era registrado, para nao poluir o log. Foi um erro: numa
+ * execucao em que seis de sete materias voltaram vazias, o unico registro era
+ * de uma recusa legitima, e as outras cinco sumiram sem deixar rastro. Contar
+ * por finish_reason separa recusa de resposta truncada sem encher o log.
  */
 let jaDiagnosticou = false;
+const falhasPorMotivo = new Map();
+
+/** Chamado pelo agregador ao fim, para o log dizer por que faltou resumo. */
+export function relatarFalhas() {
+  if (falhasPorMotivo.size === 0) return;
+  const partes = [...falhasPorMotivo.entries()].map(([m, n]) => `${m}: ${n}`);
+  console.log(`  sem resumo por motivo - ${partes.join(', ')}`);
+}
 
 /**
  * Descobre um modelo utilizavel na conta. GROQ_MODEL, quando definida, vence
@@ -345,11 +358,13 @@ export async function resumir(cliente, titulo, texto, { querDica = false } = {})
 
   const resposta = await chamarComRetentativa(cliente, {
     model: await escolherModelo(cliente),
-    // O resumo tem 400 caracteres, mas o teto precisa de folga porque alguns
-    // modelos gastam tokens raciocinando antes de responder - com teto justo a
-    // resposta volta vazia. Folga sem exagero: na camada gratuita o teto
-    // pedido conta no limite por minuto, e pedir demais derruba a proxima.
-    max_tokens: 700,
+    // O resumo tem 400 caracteres, mas o teto precisa de folga porque o
+    // gpt-oss raciocina antes de responder - com teto justo a resposta volta
+    // vazia. Subiu de 700 para 1200 quando as regras da dica cresceram: mais
+    // restricoes dao mais raciocinio, e a 700 as respostas comecaram a voltar
+    // vazias. Na camada gratuita o teto pedido conta no limite por minuto,
+    // entao a folga tem preco e nao deve crescer sem motivo.
+    max_tokens: 1200,
     // Temperatura baixa porque a tarefa e fidelidade ao texto, nao criacao.
     temperature: 0.3,
     messages: [
@@ -373,9 +388,14 @@ export async function resumir(cliente, titulo, texto, { querDica = false } = {})
     // Sem isto, "0 resumidas" nao diz se o modelo recusou, se a resposta veio
     // truncada ou se veio vazia - e a chave e secret, entao nao da para
     // reproduzir a chamada fora do runner.
+    const escolha = resposta.choices?.[0] || {};
+    const motivo = saida.includes('SEM_RESUMO')
+      ? 'recusou (SEM_RESUMO)'
+      : `vazia (finish_reason=${escolha.finish_reason})`;
+    falhasPorMotivo.set(motivo, (falhasPorMotivo.get(motivo) || 0) + 1);
+
     if (!jaDiagnosticou) {
       jaDiagnosticou = true;
-      const escolha = resposta.choices?.[0] || {};
       console.log(
         `  [diagnostico] sem resumo: finish_reason=${escolha.finish_reason}` +
           ` bruto=${bruto.length}ch limpo=${saida.length}ch` +
