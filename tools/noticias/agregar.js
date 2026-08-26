@@ -9,7 +9,14 @@
 
 import Parser from 'rss-parser';
 import { pathToFileURL } from 'node:url';
-import { criarCliente, escolherModelo, extrairTexto, iaDisponivel, resumir } from './resumir.js';
+import {
+  criarCliente,
+  escolherModelo,
+  extrairTexto,
+  iaDisponivel,
+  resumir,
+  VERSAO_DA_DICA,
+} from './resumir.js';
 import {
   FEEDS,
   TERMOS_INCLUSAO,
@@ -401,15 +408,16 @@ async function carregarResumosJaFeitos(db) {
     const d = doc.data();
     // A dica sai da mesma chamada que o resumo, entao e reaproveitada junto.
     //
-    // `dicaAvaliada` distingue "ainda nao passou pela IA pedindo dica" de
+    // `dicaVersao` distingue "ainda nao passou pela IA pedindo dica" de
     // "passou e ela recusou". Sem essa diferenca, guia sobre tratamento -
     // que nunca rende dica, de proposito - voltaria para a IA em toda
-    // execucao, para sempre, recebendo a mesma recusa.
+    // execucao, para sempre, recebendo a mesma recusa. E, sendo numero em vez
+    // de sim/nao, mudar as regras da dica reavalia os guias uma vez.
     if (d.aiSummary && d.description) {
       mapa.set(doc.id, {
         resumo: d.description,
         dica: d.dica || null,
-        dicaAvaliada: d.dicaAvaliada === true,
+        dicaVersao: Number(d.dicaVersao) || 0,
       });
     }
   }
@@ -449,9 +457,10 @@ async function publicar(db, noticias) {
       // Acao pratica tirada do texto do guia. So existe em tipo 'cuidado', e
       // so quando a materia nao e sobre tratamento.
       dica: n.dica || '',
-      // Marca que a IA ja foi consultada sobre a dica desta materia, para uma
-      // recusa nao virar nova tentativa a cada execucao.
-      dicaAvaliada: n.dicaAvaliada === true,
+      // Sob quais regras a dica foi avaliada. Serve para uma recusa nao virar
+      // nova tentativa a cada execucao, e para as regras mudarem sem deixar
+      // dica velha presa ao criterio antigo.
+      dicaVersao: Number(n.dicaVersao) || 0,
     });
   }
   await lote.commit();
@@ -582,10 +591,10 @@ ${aprovados.length} aprovados, ${descartados.length} descartados, ${candidatas.l
       // Guia resumido antes de a dica existir precisa passar pela IA de novo,
       // uma vez, senao o resumo em cache o impediria de ganhar dica para
       // sempre. A partir dai o cache volta a valer.
-      if (anterior && (!querDica || anterior.dicaAvaliada)) {
+      if (anterior && (!querDica || anterior.dicaVersao === VERSAO_DA_DICA)) {
         noticias[i].descricao = anterior.resumo;
         noticias[i].dica = anterior.dica;
-        noticias[i].dicaAvaliada = anterior.dicaAvaliada;
+        noticias[i].dicaVersao = anterior.dicaVersao;
         noticias[i].resumoPorIA = true;
         reaproveitadas++;
         continue;
@@ -596,7 +605,7 @@ ${aprovados.length} aprovados, ${descartados.length} descartados, ${candidatas.l
         if (saida) {
           noticias[i].descricao = saida.resumo;
           noticias[i].dica = saida.dica;
-          noticias[i].dicaAvaliada = querDica;
+          noticias[i].dicaVersao = querDica ? VERSAO_DA_DICA : 0;
           noticias[i].resumoPorIA = true;
           resumidas++;
         }

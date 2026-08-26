@@ -97,6 +97,20 @@ Regras:
 - Se o texto nao permitir um resumo fiel, responda exatamente: SEM_RESUMO`;
 
 /**
+ * Versao das regras da dica.
+ *
+ * Guia ja avaliado nao volta para a IA - e o que evita pagar de novo pela
+ * mesma dica a cada 6 horas. Mas quando as regras mudam, as dicas antigas
+ * ficam com o criterio velho para sempre. Subir este numero faz cada guia ser
+ * reavaliado uma vez, e so uma.
+ *
+ * 2: passou a proibir referencia a algo que so existe na materia. A versao 1
+ *    rendeu "Grave o episodio e mostre ao veterinario", que na tela inicial
+ *    nao diz de que episodio se trata.
+ */
+export const VERSAO_DA_DICA = 2;
+
+/**
  * Instrucao extra para guia de cuidado, que rende uma dica alem do resumo.
  *
  * A dica aparece sozinha na aba Cuidados, fora do contexto da materia, e por
@@ -113,6 +127,11 @@ pratica que o dono possa adotar, tirada do texto.
 Regras da dica:
 - No maximo 90 caracteres, no imperativo, em portugues do Brasil.
 - Ela sera lida sozinha, fora da materia: precisa fazer sentido isolada.
+- Nomeie o assunto dentro da propria dica. Nao escreva "o episodio", "o
+  problema", "essa condicao", "isso" nem nada que so se entenda tendo lido a
+  materia. "Grave o episodio e mostre ao veterinario" nao serve, porque quem
+  le na tela inicial nao sabe de que episodio se trata; "Filme a convulsao do
+  cao e mostre ao veterinario" serve.
 - Pode falar de observacao, prevencao, higiene, rotina e de quando procurar
   um veterinario.
 - Nao pode indicar medicamento, dose, frequencia de administracao nem

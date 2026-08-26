@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../models/news.dart';
@@ -30,6 +32,18 @@ class DicasRapidas extends StatelessWidget {
     'Verifique as vacinas em dia',
   ];
 
+  /// Embaralha a ordem, mas fixa no dia.
+  ///
+  /// Sorteio a cada build faria os cartoes pularem de lugar a cada lembrete
+  /// marcado ou atualizacao do feed, e o leitor perderia de vista a dica que
+  /// estava lendo. Com a data como semente a ordem so muda na virada do dia -
+  /// e, de quebra, difere da aba Cuidados, que mantem a ordem das materias.
+  static List<T> _daOrdemDoDia<T>(List<T> lista) {
+    final hoje = DateTime.now();
+    final semente = hoje.year * 10000 + hoje.month * 100 + hoje.day;
+    return [...lista]..shuffle(Random(semente));
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<News>>(
@@ -40,18 +54,25 @@ class DicasRapidas extends StatelessWidget {
         // tela abre.
         final comDica = (snap.data ?? []).where((g) => g.temDica).toList();
 
+        if (comDica.isEmpty) {
+          final reserva = _daOrdemDoDia(_reserva);
+          return SizedBox(
+            height: 92,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: reserva.map(_cartaoSimples).toList(),
+            ),
+          );
+        }
+
+        final dicas = _daOrdemDoDia(comDica);
         return SizedBox(
           height: 92,
-          child: comDica.isEmpty
-              ? ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: _reserva.map(_cartaoSimples).toList(),
-                )
-              : ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: comDica.length,
-                  itemBuilder: (_, i) => _cartaoDeGuia(context, comDica[i]),
-                ),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: dicas.length,
+            itemBuilder: (_, i) => _cartaoDeGuia(context, dicas[i]),
+          ),
         );
       },
     );

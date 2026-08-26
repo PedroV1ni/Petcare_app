@@ -59,6 +59,27 @@ void main() {
     expect(find.text('Escove o pelo regularmente'), findsNothing);
   });
 
+  testWidgets('a ordem nao muda entre dois builds do mesmo dia', (tester) async {
+    // A ordem e embaralhada com a data como semente. Se alguem trocar por um
+    // sorteio a cada build, os cartoes passam a pular de lugar sozinhos - a
+    // cada lembrete marcado na tela Inicio - e este teste falha.
+    List<String> ordemDosCartoes() =>
+        tester.widgetList<Text>(find.byType(Text)).map((t) => t.data ?? '').toList();
+
+    // Tres builds, e nao dois: com quatro cartoes, um sorteio solto ainda
+    // repetiria a ordem em 1 de 24 tentativas, e o teste passaria as vezes
+    // mesmo quebrado. Em tres, isso cai para 1 em 576.
+    final ordens = <List<String>>[];
+    for (var i = 0; i < 3; i++) {
+      await montar(tester, StreamController<List<News>>().stream);
+      ordens.add(ordemDosCartoes());
+    }
+
+    expect(ordens[1], equals(ordens[0]));
+    expect(ordens[2], equals(ordens[0]));
+    expect(ordens[0].length, 4);
+  });
+
   testWidgets('guia sem dica nao entra na faixa', (tester) async {
     await montar(
       tester,
