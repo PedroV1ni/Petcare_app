@@ -116,8 +116,14 @@ Regras:
  *    em 90 caracteres, e o modelo passou a cortar a frase para obedecer:
  *    "Observe se o cachorro tem febre ou dor e consulte", sem dizer quem
  *    consultar. Teto maior, frase completa exigida e conferida no codigo.
+ * 5: afrouxou uma volta. As regras 3 e 4 juntas derrubaram o numero de dicas
+ *    de seis para uma: exigir a situacao em toda dica, mais a instrucao de
+ *    preferir nenhuma dica a uma dica vaga, fez o modelo recusar quase tudo.
+ *    A situacao vira desejavel em vez de obrigatoria, e a recusa volta a ser
+ *    para materia sobre tratamento - nao para dica simples. O que resolveu o
+ *    problema original fica: nomear o animal e terminar a frase.
  */
-export const VERSAO_DA_DICA = 4;
+export const VERSAO_DA_DICA = 5;
 
 /**
  * Teto de caracteres da dica.
@@ -153,8 +159,9 @@ Regras da dica:
   EM QUE SITUACAO - sem nada disso ficar subentendido.
 - Diga o animal com todas as letras: "cao", "cachorro", "gato", "filhote".
   Nao basta "pet" nem "o animal" quando a materia fala de uma especie so.
-- Situe quando aquilo se aplica: "durante o sono", "depois do banho", "no
-  verao", "em filhotes". Dica solta no tempo nao ajuda ninguem.
+- Quando a materia deixar claro, diga em que situacao aquilo se aplica:
+  "durante o sono", "depois do banho", "no verao", "em filhotes". Se o texto
+  nao disser, nao invente uma situacao - a dica vale assim mesmo.
 - Proibido usar palavra generica no lugar do assunto: "o episodio", "o
   problema", "o quadro", "essa condicao", "o fenomeno", "o comportamento",
   "isso". Nomear so o fenomeno tambem nao basta.
@@ -167,7 +174,9 @@ Regras da dica:
   tratamento. Se a materia for principalmente sobre isso, escreva
   exatamente: DICA: SEM_DICA
 - Nao invente nada que nao esteja no texto.
-- Na duvida entre uma dica vaga e nenhuma, escreva: DICA: SEM_DICA
+- Quase todo guia de cuidado rende uma dica. So escreva SEM_DICA quando a
+  materia for sobre tratamento ou quando o texto realmente nao permitir uma
+  acao pratica - nao por a dica ter ficado simples demais.
 
 Formato da resposta, exatamente em duas partes:
 <resumo>
