@@ -5,10 +5,17 @@
 // feed das noticias. Por isso cada item passa por um filtro de inclusao e um
 // de exclusao antes de virar noticia no app.
 
-/** Feeds consultados a cada execucao. */
+/**
+ * Feeds consultados a cada execucao.
+ *
+ * `perfil` diz o que a fonte publica na maior parte do tempo: blog de
+ * varejista vive de guia de cuidado, orgao de classe vive de noticia. E so o
+ * ponto de partida - o titulo de cada materia pode mudar a classificacao.
+ */
 export const FEEDS = [
   {
     nome: 'Cobasi',
+    perfil: 'guias',
     url: 'https://blog.cobasi.com.br/feed/',
     // Blog de varejista: o conteudo editorial e bom, mas as vezes vira
     // anuncio de marca nova na loja. O filtro de exclusao cuida disso.
@@ -18,21 +25,47 @@ export const FEEDS = [
   // falha no CI, entao manter so geraria uma fonte que nunca entrega nada.
   {
     nome: 'CFMV',
+    perfil: 'noticias',
     url: 'https://www.cfmv.gov.br/feed/',
     // Conselho Federal de Medicina Veterinaria. Fonte oficial, mas metade do
     // feed e ato administrativo.
   },
   {
     nome: 'Petz',
+    perfil: 'guias',
     url: 'https://www.petz.com.br/blog/feed/',
     // Mesmo perfil da Cobasi: blog de varejista com conteudo editorial bom e
     // um anuncio no meio de vez em quando, que o filtro de exclusao pega.
   },
   {
     nome: 'CRMV-SP',
+    perfil: 'noticias',
     url: 'https://www.crmvsp.gov.br/feed/',
-    // Conselho regional de SP. Publica mais materia de orientacao ao tutor que
-    // o CFMV, que e mais institucional.
+    // Conselhos regionais. Sao a fonte de noticia datada do app depois que o
+    // Google Noticias saiu: publicam campanha, resolucao e alerta sanitario.
+    // Varios estados porque cada um publica pouco - juntos dao volume.
+  },
+  {
+    nome: 'CRMV-RJ',
+    url: 'https://crmvrj.org.br/feed/',
+    perfil: 'noticias',
+  },
+  {
+    nome: 'CRMV-BA',
+    url: 'https://www.crmvba.org.br/feed/',
+    perfil: 'noticias',
+  },
+  {
+    nome: 'CRMV-GO',
+    url: 'https://crmvgo.org.br/feed/',
+    perfil: 'noticias',
+  },
+  {
+    nome: 'Agência Brasil',
+    url: 'https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml',
+    // Agencia publica de tudo; o filtro de pets peneira. Entra porque cobre o
+    // que os conselhos nao cobrem: campanha de vacinacao, zoonose e lei.
+    perfil: 'noticias',
   },
   // Google Noticias saiu. Trazia volume e variedade regional, mas o link dele e
   // um redirect criptografado que so resolve no navegador: nao da para ler a
@@ -93,6 +126,17 @@ export const TERMOS_EXCLUSAO = [
   // Pauta sindical e trabalhista da profissao, mesma logica: interessa ao
   // veterinario, nao a quem tem um cachorro em casa.
   'riscos ocupacionais', 'piso salarial', 'carga horária da categoria',
+  'aposentadoria especial', 'vagas para médic*', 'vagas para medic*',
+
+  // Servico de conselho para o proprio conselhado. Os feeds dos CRMVs sao
+  // metade disso: anuidade, cedula profissional, portaria, manual de conduta.
+  // Nada disso muda o que o dono do animal faz em casa.
+  'anuidade*', 'cédul*', 'cedul*', 'recadastr*', 'certidõe*', 'certidao', 'certidão',
+  'código de ética', 'codigo de etica', 'manual de publicidade',
+  'emissão de documentos', 'emissao de documentos', 'portaria*',
+  'formulário para', 'formulario para', 'assembleia*', 'plenári*', 'plenari*',
+  'inscrição no crmv', 'inscricao no crmv', 'registro profissional',
+  'treinamento para implantação', 'treinamento para implantacao',
 
   // Materia de negocio, escrita para lojista e nao para dono de pet
   'mercado pet brasileiro', 'faturamento', 'balanço financeiro',
@@ -120,3 +164,47 @@ export const MINIMO_DE_NOTICIAS = 12;
 
 /** Teto absoluto: abaixo desta idade nada entra, nem para completar a lista. */
 export const IDADE_MAXIMA_EM_DIAS = 45;
+
+/**
+ * Sinais de que a materia e guia de cuidado, nao noticia.
+ *
+ * Guia nao envelhece e responde uma duvida ("Como acostumar gato a caixa de
+ * transporte"); noticia e um fato datado. Sao formatos diferentes e o leitor
+ * procura cada um em momento diferente, entao ficam em abas diferentes.
+ */
+export const SINAIS_DE_GUIA = [
+  /^como /,
+  /^o que /,
+  /^por que /,
+  /^quais /,
+  /^\d+ (sinais|dicas|formas|motivos|cuidados|passos|racas|coisas)/,
+  /\bpode (dar|tomar|comer|usar)\b/,
+  /\bsaiba como\b/,
+  /\bconfira( as)? dicas\b/,
+  /\bpasso a passo\b/,
+  /\bvale a pena\b/,
+  /\bcomo (identificar|escolher|cuidar|evitar|tratar|fazer)\b/,
+  /\bguia (completo|pratico|de)\b/,
+  /\bentenda o\b/,
+  /\btudo sobre\b/,
+  /\bmelhor .{0,20}para\b/,
+];
+
+/**
+ * Sinais de fato datado. Tem prioridade sobre os de guia: "Prefeitura explica
+ * como agendar castracao" e noticia, mesmo comecando com formato de guia.
+ */
+export const SINAIS_DE_NOTICIA = [
+  /\bprefeitura\b/,
+  /\bcampanha\b/,
+  /\bresolucao\b/,
+  /\bconselho federal\b/,
+  /\b(anuncia|aprova|lanca|inaugura|amplia|prorroga|suspende|proibe)\b/,
+  /\b(comeca|termina|acontece|abre) (nesta|neste|na|no|em)\b/,
+  /\bnesta (segunda|terca|quarta|quinta|sexta|sabado|domingo)\b/,
+  /\bcaso(s)? de\b/,
+  /\bmutirao\b/,
+  /\bnova edicao\b|\bnovas edicoes\b/,
+  /\bprojeto de lei\b|\bsancionad/,
+  /\bevento\b|\bcongresso\b|\bseminario\b/,
+];

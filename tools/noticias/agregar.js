@@ -18,6 +18,8 @@ import {
   IDADE_MAXIMA_EM_DIAS,
   JANELA_EM_DIAS,
   MINIMO_DE_NOTICIAS,
+  SINAIS_DE_GUIA,
+  SINAIS_DE_NOTICIA,
 } from './fontes.js';
 
 const SIMULAR = process.argv.includes('--simular');
@@ -141,6 +143,25 @@ export function motivoDeDescarte(texto) {
   return TESTES_EXCLUSAO.find(([, teste]) => teste.test(t))?.[0] || null;
 }
 
+/**
+ * Decide se a materia e noticia ou guia de cuidado.
+ *
+ * Sao coisas diferentes e o leitor procura cada uma em momento diferente:
+ * guia responde uma duvida e nao envelhece, noticia e um fato datado. Ficavam
+ * as duas na mesma aba, e "Como acostumar gato a caixa de transporte"
+ * aparecia como se fosse noticia do dia.
+ *
+ * O perfil da fonte e o ponto de partida; o titulo pode mudar. Fato datado
+ * ganha do formato de guia, porque prefeitura explicando como agendar
+ * castracao continua sendo noticia.
+ */
+export function classificar(titulo, perfilDaFonte) {
+  const t = normalizar(titulo);
+  if (SINAIS_DE_NOTICIA.some((sinal) => sinal.test(t))) return 'noticia';
+  if (SINAIS_DE_GUIA.some((sinal) => sinal.test(t))) return 'cuidado';
+  return perfilDaFonte === 'guias' ? 'cuidado' : 'noticia';
+}
+
 async function coletar() {
   const aprovados = [];
   const descartados = [];
@@ -193,6 +214,7 @@ async function coletar() {
 
       aprovados.push({
         titulo,
+        tipo: classificar(titulo, feed.perfil),
         // Fica vazio quando o feed nao deu resumo de verdade; o preview da
         // pagina tenta preencher depois, e o veiculo entra como ultimo caso.
         descricao: temResumoProprio ? encurtar(resumo, 400) : '',
@@ -410,6 +432,8 @@ async function publicar(db, noticias) {
       sourceUrl: n.link,
       imageUrl: n.imagem || '',
       aiSummary: n.resumoPorIA,
+      // 'noticia' ou 'cuidado': decide em qual aba do app a materia aparece.
+      tipo: n.tipo,
     });
   }
   await lote.commit();
@@ -570,7 +594,7 @@ ${aprovados.length} aprovados, ${descartados.length} descartados, ${candidatas.l
   if (SIMULAR) {
     console.log('--- SERIAM PUBLICADAS ---');
     publicaveis.forEach((n, i) => {
-      console.log(`${String(i + 1).padStart(2)}. [${n.autor}] ${n.titulo}`);
+      console.log(`${String(i + 1).padStart(2)}. [${n.tipo === 'cuidado' ? 'CUIDADO' : 'NOTICIA'}] [${n.autor}] ${n.titulo}`);
       // A descricao aparece como subtitulo na lista do app, entao vale
       // conferir aqui se ela agrega algo ou so repete o titulo.
       console.log(`    resumo: ${n.descricao.slice(0, 90)}`);
@@ -584,6 +608,9 @@ ${aprovados.length} aprovados, ${descartados.length} descartados, ${candidatas.l
     });
     return;
   }
+
+  const guias = publicaveis.filter((n) => n.tipo === 'cuidado').length;
+  console.log(`  ${publicaveis.length - guias} noticias e ${guias} guias de cuidado.`);
 
   if (publicaveis.length === 0) {
     console.error('Nenhuma noticia aprovada. Abortando para nao esvaziar o app.');

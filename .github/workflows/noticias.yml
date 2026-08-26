@@ -26,6 +26,13 @@ jobs:
         working-directory: tools/noticias
         run: npm ci
 
+      # O filtro decide o que chega ao usuario. Quando errou, publicou materia
+      # sobre limpar piscina numa aba de noticia de pet - por isso ele tem
+      # teste, e o teste roda antes de qualquer publicacao.
+      - name: Testar a curadoria
+        working-directory: tools/noticias
+        run: node --test
+
       # Roda antes de publicar: se os feeds mudarem de formato ou sairem do ar,
       # o log mostra o que aconteceu sem depender de olhar o Firestore.
       - name: Conferir a curadoria

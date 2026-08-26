@@ -14,6 +14,10 @@ class News {
   /// Marca resumo gerado por IA a partir do texto da materia. O app precisa
   /// avisar isso ao leitor - resumo automatico pode errar enfase.
   final bool aiSummary;
+  /// `noticia` (fato datado) ou `cuidado` (guia que nao envelhece). Sao
+  /// formatos diferentes, procurados em momentos diferentes, entao cada um vai
+  /// para a sua aba. Documento antigo, sem o campo, conta como noticia.
+  final String tipo;
 
   News({
     required this.id,
@@ -24,9 +28,11 @@ class News {
     required this.sourceUrl,
     this.imageUrl = '',
     this.aiSummary = false,
+    this.tipo = 'noticia',
   });
 
   bool get temCapa => imageUrl.isNotEmpty;
+  bool get ehGuiaDeCuidado => tipo == 'cuidado';
 
   factory News.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data()! as Map<String, dynamic>;
@@ -39,6 +45,7 @@ class News {
       sourceUrl: data['sourceUrl'] ?? '',
       imageUrl: data['imageUrl'] ?? '',
       aiSummary: data['aiSummary'] ?? false,
+      tipo: data['tipo'] ?? 'noticia',
     );
   }
 }

@@ -10,7 +10,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { ehSobrePets, motivoDeDescarte } from './agregar.js';
+import { classificar, ehSobrePets, motivoDeDescarte } from './agregar.js';
 
 test('nome da fonte nao faz o item parecer sobre pet', () => {
   assert.equal(ehSobrePets('Como limpar piscina verde: passo a passo | Petz'), false);
@@ -58,4 +58,38 @@ test('materia boa nao e descartada por engano', () => {
   // "mortalidade" contem "morta", que esta na lista de exclusao como palavra
   // inteira. Se o teste falhar aqui, o filtro voltou a comparar por trecho.
   assert.equal(motivoDeDescarte('Estudo mede a mortalidade infantil em filhotes'), null);
+});
+
+test('guia de cuidado nao entra como noticia', () => {
+  assert.equal(classificar('Como acostumar gato a caixa de transporte?', 'guias'), 'cuidado');
+  assert.equal(classificar('10 sinais de que um gato esta triste', 'guias'), 'cuidado');
+  assert.equal(classificar('Pode dar dipirona para cachorro?', 'guias'), 'cuidado');
+  assert.equal(classificar('Melhor areia para gatos: 5 dicas', 'guias'), 'cuidado');
+});
+
+test('fato datado e noticia mesmo com cara de guia', () => {
+  // Comeca com "Como", que e formato de guia, mas fala de um fato datado.
+  assert.equal(classificar('Como a prefeitura vai agendar a castracao', 'guias'), 'noticia');
+  assert.equal(classificar('Campanha de vacinacao antirrabica comeca nesta segunda', 'guias'), 'noticia');
+});
+
+test('sem sinal no titulo, vale o perfil da fonte', () => {
+  assert.equal(classificar('Caspa em cachorro: identificar e tratar', 'guias'), 'cuidado');
+  assert.equal(classificar('Medico-veterinario em casa: ate onde vai o atendimento', 'noticias'), 'noticia');
+});
+
+test('descarta pauta dirigida ao veterinario, nao ao dono', () => {
+  assert.ok(motivoDeDescarte('Reajuste da anuidade para o ano de 2027'));
+  assert.ok(motivoDeDescarte('Formulario para receber a cedula em Itapetinga'));
+  assert.ok(motivoDeDescarte('Codigo de Etica do Medico Veterinario'));
+  assert.ok(motivoDeDescarte('Portaria CRMV/GO no 58/2026'));
+  assert.ok(motivoDeDescarte('Ministerio da Saude abre selecao com vagas para medicos-veterinarios'));
+});
+
+test('noticia que muda a vida do dono continua passando', () => {
+  assert.equal(
+    motivoDeDescarte('Projeto preve suspensao da CNH por abandono de animais'),
+    null,
+  );
+  assert.equal(motivoDeDescarte('Atendimento medico-veterinario domiciliar'), null);
 });
