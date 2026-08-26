@@ -119,19 +119,58 @@ Cada execução só resume o que é novo: matérias já resumidas antes são
 reaproveitadas. Como as fontes publicam uma ou duas por dia e o job roda de 6 em
 6 horas, isso é a diferença entre ~50 e ~1.200 chamadas por mês.
 
-### Por que só parte das notícias tem resumo
+### O que vira notícia e o que vira cuidado
 
-Notícias vindas do Google Notícias chegam por um link de redirecionamento
-criptografado: não é possível alcançar a matéria para ler resumo, imagem de capa
-ou texto. Essas aparecem só com título, veículo e data.
+Cada matéria é classificada em um dos dois tipos, e é isso que decide a aba:
 
-As de link direto trazem `og:description` e `og:image` — metadados que o próprio
-veículo publica para preview de link. Quando há chave da Groq, o resumo é
-refeito a partir do texto da matéria e o app marca **"Resumido por IA"**.
+- **notícia** — fato datado: campanha de vacinação, projeto de lei, alerta.
+- **cuidado** — guia que não envelhece: "Pode dar dipirona para cachorro?".
+
+O perfil da fonte é o ponto de partida (blog de varejista vive de guia,
+conselho de veterinária vive de notícia) e o título pode mudar a conclusão.
+Fato datado ganha do formato de guia: prefeitura explicando como agendar
+castração continua sendo notícia.
+
+Guia aparece em **Cuidados**, abaixo das dicas escritas no app. Antes os dois
+ficavam juntos e um guia que continuava valendo envelhecia junto com a notícia
+do dia.
+
+### Só entra o que dá para ler
+
+Matéria que o agregador não consegue abrir é descartada. No app ela seria só um
+título: abrir não entregaria nada e o único caminho seria sair para o navegador.
+
+Foi por isso que o Google Notícias saiu das fontes, apesar de ser quem dava mais
+volume — o link dele é um redirecionamento criptografado que só resolve dentro
+do navegador.
+
+As fontes atuais trazem `og:description` e `og:image`, metadados que o próprio
+veículo publica para preview de link. Havendo chave da Groq, o resumo é refeito
+a partir do texto da matéria e o app marca **"Resumido por IA"**.
 
 **A IA nunca resume o que não pode ler.** Gerar um "resumo" a partir de um
 título seria inventar conteúdo, e num app sobre saúde animal isso pode virar
 orientação errada sobre medicamento ou doença.
+
+### Ordem e validade
+
+A lista vai da mais recente para a mais antiga, e a janela desejada é de 15
+dias. Só a janela deixava o app com 7 matérias — as fontes brasileiras de pet
+publicam pouco —, então há um piso: faltando matéria nova, a lista completa com
+as mais recentes que sobraram, até o teto de 45 dias.
+
+### Curadoria
+
+`fontes.js` tem duas listas de termos. Um termo terminado em `*` é raiz e casa
+com o que vier depois (`castra*` pega castração e CastraMóvel); sem o `*`, tem
+de ser a palavra inteira — foi o que impediu `pet` de casar dentro de `Petz` e
+aprovar uma matéria sobre limpar piscina.
+
+A lista de exclusão existe porque feed oficial publica muito para o próprio
+público: edital, anuidade, código de ética e cédula profissional não mudam nada
+para quem tem um cachorro em casa.
+
+O filtro tem teste (`node --test`), e o teste roda no CI antes de publicar.
 
 ## Planejamento
 
