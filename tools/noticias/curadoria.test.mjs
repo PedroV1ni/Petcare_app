@@ -106,16 +106,18 @@ test('dica que nao diz de quem fala e recusada', () => {
   assert.equal(dicaEhAutossuficiente('Observe o comportamento e procure ajuda'), false);
 });
 
+// A partir da versao 4 das regras a dica tem de ser uma frase terminada:
+// e assim que o codigo pega o corte no meio da frase.
 test('dica que nomeia animal e situacao passa', () => {
-  assert.ok(dicaEhAutossuficiente('Filme o cao se ele se mexer muito dormindo'));
-  assert.ok(dicaEhAutossuficiente('Observe se a caspa do cachorro vem com coceira'));
-  assert.ok(dicaEhAutossuficiente('Ofereca esconderijos ao gato para enriquecer o ambiente'));
-  assert.ok(dicaEhAutossuficiente('Consulte o veterinario antes de dar dipirona ao seu cao'));
+  assert.ok(dicaEhAutossuficiente('Filme o cao se ele se mexer muito dormindo.'));
+  assert.ok(dicaEhAutossuficiente('Observe se a caspa do cachorro vem com coceira.'));
+  assert.ok(dicaEhAutossuficiente('Ofereca esconderijos ao gato para enriquecer o ambiente.'));
+  assert.ok(dicaEhAutossuficiente('Consulte o veterinario antes de dar dipirona ao seu cao.'));
 });
 
 test('acento e caixa nao mudam a conferencia', () => {
-  assert.ok(dicaEhAutossuficiente('Escove os dentes do CÃO duas vezes por semana'));
-  assert.equal(dicaEhAutossuficiente('Grave O EPISÓDIO e mostre'), false);
+  assert.ok(dicaEhAutossuficiente('Escove os dentes do CÃO duas vezes por semana.'));
+  assert.equal(dicaEhAutossuficiente('Grave O EPISÓDIO e mostre ao veterinario.'), false);
 });
 
 test('dica cortada no meio e recusada', () => {
