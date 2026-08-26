@@ -399,7 +399,10 @@ async function carregarResumosJaFeitos(db) {
   const docs = await db.collection('news').get();
   for (const doc of docs.docs) {
     const d = doc.data();
-    if (d.aiSummary && d.description) mapa.set(doc.id, d.description);
+    // A dica sai da mesma chamada que o resumo, entao e reaproveitada junto.
+    if (d.aiSummary && d.description) {
+      mapa.set(doc.id, { resumo: d.description, dica: d.dica || null });
+    }
   }
   return mapa;
 }
@@ -434,6 +437,9 @@ async function publicar(db, noticias) {
       aiSummary: n.resumoPorIA,
       // 'noticia' ou 'cuidado': decide em qual aba do app a materia aparece.
       tipo: n.tipo,
+      // Acao pratica tirada do texto do guia. So existe em tipo 'cuidado', e
+      // so quando a materia nao e sobre tratamento.
+      dica: n.dica || '',
     });
   }
   await lote.commit();
@@ -558,16 +564,22 @@ ${aprovados.length} aprovados, ${descartados.length} descartados, ${candidatas.l
       // mesmo resumo a cada 6 horas, e as fontes publicam uma vez por dia.
       const anterior = jaFeitos.get(idDoDocumento(noticias[i].link));
       if (anterior) {
-        noticias[i].descricao = anterior;
+        noticias[i].descricao = anterior.resumo;
+        noticias[i].dica = anterior.dica;
         noticias[i].resumoPorIA = true;
         reaproveitadas++;
         continue;
       }
 
       try {
-        const resumo = await resumir(cliente, noticias[i].titulo, texto);
-        if (resumo) {
-          noticias[i].descricao = resumo;
+        // So guia rende dica: ela aparece na aba Cuidados, e noticia datada
+        // nao vira conselho pratico.
+        const saida = await resumir(cliente, noticias[i].titulo, texto, {
+          querDica: noticias[i].tipo === 'cuidado',
+        });
+        if (saida) {
+          noticias[i].descricao = saida.resumo;
+          noticias[i].dica = saida.dica;
           noticias[i].resumoPorIA = true;
           resumidas++;
         }
@@ -577,7 +589,9 @@ ${aprovados.length} aprovados, ${descartados.length} descartados, ${candidatas.l
         console.error(`  falhou em "${noticias[i].titulo.slice(0, 45)}": ${erro.message}`);
       }
     }
-    console.log(`  ${resumidas} novas resumidas, ${reaproveitadas} reaproveitadas, ${semTexto} sem texto acessivel.\n`);
+    const comDica = noticias.filter((n) => n.dica).length;
+    console.log(`  ${resumidas} novas resumidas, ${reaproveitadas} reaproveitadas, ${semTexto} sem texto acessivel.`);
+    console.log(`  ${comDica} guias renderam dica pratica.\n`);
   } else if (!SIMULAR) {
     console.log('GROQ_API_KEY nao definida: seguindo sem resumo por IA.\n');
   }

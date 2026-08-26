@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 
-import '../models/care.dart';
 import '../models/news.dart';
 import '../services/data_service.dart';
+import '../utils/app_widgets.dart';
 import '../widgets/news_card.dart';
-import 'care_detail_screen.dart';
+import 'news_detail_screen.dart';
 
-/// Aba Cuidados: as dicas do proprio app mais os guias vindos dos feeds.
+/// Aba Cuidados: guias vindos das fontes, e as dicas tiradas deles.
 ///
-/// Guia de cuidado ("Pode dar dipirona para cachorro?") chegava junto com as
-/// noticias e envelhecia junto com elas, apesar de continuar valendo. Aqui ele
-/// fica onde o leitor procura quando tem uma duvida, e nao quando quer saber
-/// o que aconteceu.
+/// Antes as dicas eram escritas a mao dentro do app. Agora toda dica sai do
+/// texto de uma materia real e leva a ela: tocar na dica abre o guia de onde
+/// ela veio, para o leitor conferir o contexto em vez de confiar numa frase
+/// solta.
 class CareScreen extends StatelessWidget {
   CareScreen({super.key});
 
@@ -19,12 +19,47 @@ class CareScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 24),
-      children: [
-        _dicasDoApp(context),
-        _guiasDasFontes(),
-      ],
+    return StreamBuilder<List<News>>(
+      stream: _service.streamGuiasDeCuidado(),
+      builder: (ctx, snap) {
+        if (snap.hasError) {
+          return AppErrorWidget(
+              message: 'Erro ao carregar cuidados: ${snap.error}');
+        }
+        if (!snap.hasData) {
+          return const AppLoadingWidget(message: 'Carregando cuidados...');
+        }
+        final guias = snap.data!;
+        if (guias.isEmpty) {
+          return const AppEmptyWidget(
+            message: 'Nenhum guia de cuidado por enquanto.',
+            icon: Icons.favorite_outline,
+          );
+        }
+
+        final comDica = guias.where((g) => g.temDica).toList();
+
+        return ListView(
+          padding: const EdgeInsets.only(bottom: 24),
+          children: [
+            if (comDica.isNotEmpty) _dicas(context, comDica),
+            _titulo(
+              'Guias das fontes',
+              explicacao: 'Publicados por veículos e conselhos de veterinária',
+            ),
+            for (var i = 0; i < guias.length; i++) ...[
+              if (i > 0)
+                Divider(
+                  height: 1,
+                  indent: 16,
+                  endIndent: 16,
+                  color: Colors.brown.shade50,
+                ),
+              NewsCard(news: guias[i]),
+            ],
+          ],
+        );
+      },
     );
   }
 
@@ -54,71 +89,72 @@ class CareScreen extends StatelessWidget {
     );
   }
 
-  Widget _dicasDoApp(BuildContext context) {
-    return StreamBuilder<List<Care>>(
-      stream: _service.streamCare(),
-      builder: (ctx, snap) {
-        final cares = snap.data ?? [];
-        if (cares.isEmpty) return const SizedBox.shrink();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _titulo('Dicas do PetCare'),
-            ...cares.map(
-              (care) => ListTile(
-                leading: Icon(Icons.favorite, size: 30, color: Colors.brown.shade300),
-                title: Text(
-                  care.title,
-                  style: TextStyle(
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.brown.shade900,
-                  ),
-                ),
-                subtitle: Text(
-                  care.description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 13.5, color: Colors.brown.shade400),
-                ),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => CareDetailScreen(care: care)),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+  /// Faixa horizontal de dicas. Horizontal de proposito: sao frases curtas, e
+  /// empilhadas ocupariam a tela toda antes de o leitor chegar nos guias.
+  Widget _dicas(BuildContext context, List<News> comDica) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _titulo('Dicas rápidas', explicacao: 'Tiradas das matérias abaixo'),
+        SizedBox(
+          height: 132,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: comDica.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 11),
+            itemBuilder: (_, i) => _cartaoDeDica(context, comDica[i]),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _guiasDasFontes() {
-    return StreamBuilder<List<News>>(
-      stream: _service.streamGuiasDeCuidado(),
-      builder: (ctx, snap) {
-        final guias = snap.data ?? [];
-        if (guias.isEmpty) return const SizedBox.shrink();
-        return Column(
+  Widget _cartaoDeDica(BuildContext context, News guia) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => NewsDetailScreen(news: guia)),
+      ),
+      child: Container(
+        width: 210,
+        padding: const EdgeInsets.fromLTRB(14, 13, 14, 11),
+        decoration: BoxDecoration(
+          color: Colors.brown.shade50,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.brown.shade100),
+        ),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _titulo(
-              'Guias das fontes',
-              explicacao: 'Publicados por veículos e conselhos de veterinária',
-            ),
-            for (var i = 0; i < guias.length; i++) ...[
-              if (i > 0)
-                Divider(
-                  height: 1,
-                  indent: 16,
-                  endIndent: 16,
-                  color: Colors.brown.shade50,
+            Icon(Icons.lightbulb_outline, size: 19, color: Colors.brown.shade400),
+            const SizedBox(height: 8),
+            Expanded(
+              child: Text(
+                guia.dica,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  height: 1.35,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.brown.shade900,
                 ),
-              NewsCard(news: guias[i]),
-            ],
+              ),
+            ),
+            const SizedBox(height: 6),
+            // A fonte fica visivel na propria dica: sem isso ela viraria um
+            // conselho do app, e o app nao e quem esta dizendo aquilo.
+            Text(
+              guia.author,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 11, color: Colors.brown.shade400),
+            ),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 }

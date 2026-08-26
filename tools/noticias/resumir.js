@@ -97,6 +97,49 @@ Regras:
 - Se o texto nao permitir um resumo fiel, responda exatamente: SEM_RESUMO`;
 
 /**
+ * Instrucao extra para guia de cuidado, que rende uma dica alem do resumo.
+ *
+ * A dica aparece sozinha na aba Cuidados, fora do contexto da materia, e por
+ * isso o que ela pode dizer e mais estreito que o resumo: serve para observar
+ * e prevenir, nunca para tratar. Dose de medicamento fora de contexto e o
+ * caso que mais preocupa - "1 gota por quilo" lido solto, sem a parte de que
+ * so vale com prescricao, vira instrucao de automedicacao.
+ */
+const INSTRUCAO_COM_DICA = `${INSTRUCAO}
+
+Depois do resumo, escreva uma linha comecando com "DICA:" contendo uma acao
+pratica que o dono possa adotar, tirada do texto.
+
+Regras da dica:
+- No maximo 90 caracteres, no imperativo, em portugues do Brasil.
+- Ela sera lida sozinha, fora da materia: precisa fazer sentido isolada.
+- Pode falar de observacao, prevencao, higiene, rotina e de quando procurar
+  um veterinario.
+- Nao pode indicar medicamento, dose, frequencia de administracao nem
+  tratamento. Se a materia for principalmente sobre isso, escreva
+  exatamente: DICA: SEM_DICA
+- Nao invente nada que nao esteja no texto.
+
+Formato da resposta, exatamente em duas partes:
+<resumo>
+DICA: <dica>`;
+
+/** Separa o resumo da dica na resposta de duas partes. */
+function separarResumoEDica(saida) {
+  const marca = saida.search(/^\s*DICA:/im);
+  if (marca === -1) return { resumo: saida.trim(), dica: null };
+
+  const resumo = saida.slice(0, marca).trim();
+  const bruta = saida
+    .slice(marca)
+    .replace(/^\s*DICA:\s*/i, '')
+    .trim();
+
+  const dica = !bruta || /SEM_DICA/i.test(bruta) ? null : bruta.replace(/^["']|["']$/g, '').trim();
+  return { resumo, dica };
+}
+
+/**
  * Extrai o corpo da materia do HTML.
  *
  * Nao e um parser de verdade - so remove o que atrapalha (script, style, menu,
@@ -182,7 +225,17 @@ async function chamarComRetentativa(cliente, corpo, tentativas = 3) {
   }
 }
 
-export async function resumir(cliente, titulo, texto) {
+/**
+ * Resume a materia e, para guia de cuidado, tira dela uma dica pratica.
+ *
+ * As duas coisas saem da mesma chamada de proposito. A camada gratuita limita
+ * tokens por minuto, entao pedir a dica separada dobraria as chamadas e faria
+ * o job esbarrar no limite - o resumo ja custou uma materia por 429 antes.
+ *
+ * Devolve `{ resumo, dica }`, com `dica` nula quando nao foi pedida ou quando
+ * o modelo recusou por a materia ser sobre tratamento.
+ */
+export async function resumir(cliente, titulo, texto, { querDica = false } = {}) {
   if (!texto || texto.length < MINIMO_DE_CARACTERES) return null;
 
   const resposta = await chamarComRetentativa(cliente, {
@@ -195,7 +248,7 @@ export async function resumir(cliente, titulo, texto) {
     // Temperatura baixa porque a tarefa e fidelidade ao texto, nao criacao.
     temperature: 0.3,
     messages: [
-      { role: 'system', content: INSTRUCAO },
+      { role: 'system', content: querDica ? INSTRUCAO_COM_DICA : INSTRUCAO },
       {
         role: 'user',
         content: `Titulo: ${titulo}\n\nTexto da materia:\n${texto.slice(0, 7000)}`,
@@ -228,9 +281,17 @@ export async function resumir(cliente, titulo, texto) {
     return null;
   }
 
-  // Modelo aberto as vezes devolve o resumo entre aspas mesmo instruido a nao
-  // fazer isso; tirar aqui e mais barato que insistir no prompt.
-  return saida.replace(/^["']|["']$/g, '').trim();
+  const { resumo, dica } = separarResumoEDica(saida);
+  if (!resumo || resumo.includes('SEM_RESUMO')) return null;
+
+  return {
+    // Modelo aberto as vezes devolve o resumo entre aspas mesmo instruido a
+    // nao fazer isso; tirar aqui e mais barato que insistir no prompt.
+    resumo: resumo.replace(/^["']|["']$/g, '').trim(),
+    // Dica longa demais foi o modelo ignorando o limite: cortar no meio da
+    // frase deixaria um conselho pela metade, entao ela e descartada.
+    dica: dica && dica.length <= 110 ? dica : null,
+  };
 }
 
 export function criarCliente() {

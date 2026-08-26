@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/news.dart';
-import '../models/care.dart';
 
 class DataService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -24,10 +23,4 @@ class DataService {
   /// Guia que nao envelhece: alimenta a aba Cuidados.
   Stream<List<News>> streamGuiasDeCuidado() =>
       _streamPorTipo((n) => n.ehGuiaDeCuidado);
-
-  Stream<List<Care>> streamCare() => _db
-      .collection('care')
-      .orderBy('title')
-      .snapshots()
-      .map((snap) => snap.docs.map((d) => Care.fromFirestore(d)).toList());
 }

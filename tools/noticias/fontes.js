@@ -60,13 +60,10 @@ export const FEEDS = [
     url: 'https://crmvgo.org.br/feed/',
     perfil: 'noticias',
   },
-  {
-    nome: 'Agência Brasil',
-    url: 'https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml',
-    // Agencia publica de tudo; o filtro de pets peneira. Entra porque cobre o
-    // que os conselhos nao cobrem: campanha de vacinacao, zoonose e lei.
-    perfil: 'noticias',
-  },
+  // Agencia Brasil saiu. A ideia era cobrir o que os conselhos nao cobrem, mas
+  // o feed dela e de ultimas noticias em geral: dez itens sobre qualquer
+  // assunto, dos quais nenhum passou no filtro de pets. Fonte que nunca
+  // entrega so gasta uma requisicao por execucao.
   // Google Noticias saiu. Trazia volume e variedade regional, mas o link dele e
   // um redirect criptografado que so resolve no navegador: nao da para ler a
   // materia. No app essas noticias viravam so um titulo - sem resumo, sem capa

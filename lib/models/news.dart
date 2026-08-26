@@ -18,6 +18,10 @@ class News {
   /// formatos diferentes, procurados em momentos diferentes, entao cada um vai
   /// para a sua aba. Documento antigo, sem o campo, conta como noticia.
   final String tipo;
+  /// Acao pratica tirada do texto do guia, para a lista de dicas rapidas.
+  /// Vem vazia em noticia e em guia sobre tratamento - nesse caso a IA e
+  /// instruida a nao gerar dica, porque ela e lida fora do contexto da materia.
+  final String dica;
 
   News({
     required this.id,
@@ -29,10 +33,12 @@ class News {
     this.imageUrl = '',
     this.aiSummary = false,
     this.tipo = 'noticia',
+    this.dica = '',
   });
 
   bool get temCapa => imageUrl.isNotEmpty;
   bool get ehGuiaDeCuidado => tipo == 'cuidado';
+  bool get temDica => dica.isNotEmpty;
 
   factory News.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data()! as Map<String, dynamic>;
@@ -46,6 +52,7 @@ class News {
       imageUrl: data['imageUrl'] ?? '',
       aiSummary: data['aiSummary'] ?? false,
       tipo: data['tipo'] ?? 'noticia',
+      dica: data['dica'] ?? '',
     );
   }
 }
