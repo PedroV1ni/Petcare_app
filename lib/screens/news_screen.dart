@@ -15,35 +15,6 @@ class NewsScreen extends StatelessWidget {
     'jul', 'ago', 'set', 'out', 'nov', 'dez',
   ];
 
-  /// Evita que o topo da lista fique so com materia sem resumo.
-  ///
-  /// O Firestore devolve por data, e ai as materias editoriais - as unicas com
-  /// resumo e capa - afundam, porque aviso de prefeitura sai todo dia e guia
-  /// de cuidado nao. A ordem cronologica continua dentro de cada grupo, mas
-  /// nao se permite mais de dois itens seguidos sem resumo.
-  List<News> _intercalar(List<News> lista) {
-    bool temResumo(News n) =>
-        n.description.isNotEmpty && n.description != n.author;
-
-    final ricas = lista.where(temResumo).toList();
-    final secas = lista.where((n) => !temResumo(n)).toList();
-    final saida = <News>[];
-    var seguidasSemResumo = 0;
-
-    while (ricas.isNotEmpty || secas.isNotEmpty) {
-      final pegarRica =
-          ricas.isNotEmpty && (seguidasSemResumo >= 2 || secas.isEmpty);
-      if (pegarRica) {
-        saida.add(ricas.removeAt(0));
-        seguidasSemResumo = 0;
-      } else {
-        saida.add(secas.removeAt(0));
-        seguidasSemResumo++;
-      }
-    }
-    return saida;
-  }
-
   /// Data curta ao lado do veiculo. "há 2 dias" diz mais que "23 de ago."
   /// quando a noticia acabou de sair, que e o caso da maioria da lista.
   String _quando(DateTime d) {
@@ -65,7 +36,8 @@ class NewsScreen extends StatelessWidget {
         if (!snap.hasData) {
           return const AppLoadingWidget(message: 'Carregando notícias...');
         }
-        final lista = _intercalar(snap.data!);
+        // Ja vem do Firestore da mais recente para a mais antiga.
+        final lista = snap.data!;
         if (lista.isEmpty) {
           return const AppEmptyWidget(
             message: 'Nenhuma notícia por enquanto.',
@@ -88,10 +60,9 @@ class NewsScreen extends StatelessWidget {
   }
 
   Widget _cartao(BuildContext context, News news) {
-    // A descricao vira o nome do veiculo quando nao ha resumo; nesse caso
-    // mostra-la aqui seria repetir o que ja aparece na linha de baixo.
-    final temResumo =
-        news.description.isNotEmpty && news.description != news.author;
+    // O agregador so publica materia com resumo, mas a colecao aceita
+    // documento escrito a mao, e esse pode vir sem.
+    final temResumo = news.description.isNotEmpty;
 
     return InkWell(
       onTap: () => Navigator.push(
@@ -163,9 +134,9 @@ class NewsScreen extends StatelessWidget {
     );
   }
 
-  /// So parte das materias tem capa - o link do Google Noticias nao permite
-  /// descobrir a imagem. O bloco tem tamanho fixo para a lista nao ficar
-  /// desalinhada entre uma noticia com foto e outra sem.
+  /// Quase toda materia tem capa, mas o veiculo pode nao declarar nenhuma. O
+  /// bloco tem tamanho fixo para a lista nao ficar desalinhada quando isso
+  /// acontecer.
   Widget _miniatura(News news) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
@@ -185,9 +156,16 @@ class NewsScreen extends StatelessWidget {
     );
   }
 
+  /// Marca da casa em vez de icone generico: sem capa a lista ficava com um
+  /// quadrado cinza que parecia imagem quebrada.
   Widget _semCapa() => Container(
-        color: Colors.brown.shade50,
-        child: Icon(Icons.article_outlined,
-            size: 30, color: Colors.brown.shade200),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.brown.shade50, Colors.orange.shade50],
+          ),
+        ),
+        child: Icon(Icons.pets, size: 28, color: Colors.brown.shade200),
       );
 }

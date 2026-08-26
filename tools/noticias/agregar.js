@@ -8,6 +8,7 @@
 // JSON da conta de servico. No GitHub Actions ela e um secret do repositorio.
 
 import Parser from 'rss-parser';
+import { pathToFileURL } from 'node:url';
 import { criarCliente, escolherModelo, extrairTexto, iaDisponivel, resumir } from './resumir.js';
 import {
   FEEDS,
@@ -15,25 +16,41 @@ import {
   TERMOS_EXCLUSAO,
   LIMITE_DE_NOTICIAS,
   IDADE_MAXIMA_EM_DIAS,
+  JANELA_EM_DIAS,
+  MINIMO_DE_NOTICIAS,
 } from './fontes.js';
 
 const SIMULAR = process.argv.includes('--simular');
 
-const parser = new Parser({
-  timeout: 20000,
-  headers: { 'User-Agent': 'PetCare/1.0 (+https://github.com/PedroV1ni/Petcare_app)' },
-  // O <source> do Google Noticias traz o veiculo em campo proprio. Sem
-  // declarar aqui o rss-parser descarta a tag, e sobraria cortar o titulo
-  // no ultimo " - " - que erra quando o proprio nome do veiculo tem hifen.
-  customFields: { item: [['source', 'fonteRss']] },
-});
+/**
+ * User-Agent de navegador.
+ *
+ * Nao e disfarce por esporte: o WAF da Petz responde 403 para qualquer coisa
+ * que nao siga o padrao de navegador - testei identificando o projeto e
+ * tambem tomei 403. Sao feeds RSS publicos, feitos para serem lidos por
+ * programa, e o bloqueio e por formato do cabecalho, nao por quem somos.
+ */
+const NAVEGADOR =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36';
 
-/** O <source> vem como string ou como objeto com atributos, conforme o feed. */
-function veiculoDoItem(item) {
-  const f = item.fonteRss;
-  if (!f) return null;
-  if (typeof f === 'string') return f.trim() || null;
-  return (f._ || f['#text'] || '').trim() || null;
+const parser = new Parser();
+
+/**
+ * Baixa o XML do feed e entrega ao parser ja como texto.
+ *
+ * O rss-parser sabe buscar sozinho, mas o cliente HTTP interno dele toma 403
+ * da Petz mesmo mandando os mesmos cabecalhos com que o fetch passa - a
+ * diferenca esta abaixo do cabecalho, na assinatura da conexao. Buscar com
+ * fetch resolve e ainda deixa um so caminho de rede no arquivo.
+ */
+async function baixarFeed(url) {
+  const resposta = await fetch(url, {
+    redirect: 'follow',
+    signal: AbortSignal.timeout(20000),
+    headers: { 'User-Agent': NAVEGADOR },
+  });
+  if (!resposta.ok) throw new Error(`status ${resposta.status}`);
+  return parser.parseString(await resposta.text());
 }
 
 /** Remove acento e caixa, para o filtro nao depender de como foi escrito. */
@@ -93,28 +110,35 @@ function encurtar(texto, limite) {
 }
 
 /**
- * O Google Noticias devolve titulos no formato "Manchete - Veiculo".
- * Separa os dois para o veiculo virar o autor da noticia no app.
+ * Monta o teste de um termo da curadoria.
+ *
+ * Comparar por trecho solto nao serve: "pet" aparece dentro de "Petz" e de
+ * "apetite", e foi assim que uma materia sobre limpar piscina entrou na aba de
+ * noticias de pet. O termo precisa comecar em inicio de palavra.
+ *
+ * Termo terminado em "*" e raiz e casa com o que vier depois - "castra*" pega
+ * castracao e CastraMovel. Sem o "*", tem de ser a palavra inteira.
  */
-function separarTituloEVeiculo(titulo, veiculoPadrao) {
-  const posicao = titulo.lastIndexOf(' - ');
-  if (posicao > 20) {
-    return {
-      titulo: titulo.slice(0, posicao).trim(),
-      veiculo: titulo.slice(posicao + 3).trim(),
-    };
-  }
-  return { titulo: titulo.trim(), veiculo: veiculoPadrao };
+function testeDoTermo(termo) {
+  const limpo = normalizar(termo);
+  const raiz = limpo.endsWith('*');
+  const semMarca = raiz ? limpo.slice(0, -1) : limpo;
+  const corpo = semMarca.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp('\\b' + corpo + (raiz ? '' : '\\b'));
 }
 
-function ehSobrePets(texto) {
+// Compilado uma vez: sao ~50 termos contra centenas de itens por execucao.
+const TESTES_INCLUSAO = TERMOS_INCLUSAO.map(testeDoTermo);
+const TESTES_EXCLUSAO = TERMOS_EXCLUSAO.map((t) => [t, testeDoTermo(t)]);
+
+export function ehSobrePets(texto) {
   const t = normalizar(texto);
-  return TERMOS_INCLUSAO.some((termo) => t.includes(normalizar(termo)));
+  return TESTES_INCLUSAO.some((teste) => teste.test(t));
 }
 
-function motivoDeDescarte(texto) {
+export function motivoDeDescarte(texto) {
   const t = normalizar(texto);
-  return TERMOS_EXCLUSAO.find((termo) => t.includes(normalizar(termo))) || null;
+  return TESTES_EXCLUSAO.find(([, teste]) => teste.test(t))?.[0] || null;
 }
 
 async function coletar() {
@@ -124,7 +148,7 @@ async function coletar() {
   for (const feed of FEEDS) {
     let resultado;
     try {
-      resultado = await parser.parseURL(feed.url);
+      resultado = await baixarFeed(feed.url);
     } catch (erro) {
       // Um feed fora do ar nao pode derrubar a atualizacao inteira.
       console.error(`  [${feed.nome}] falhou: ${erro.message}`);
@@ -139,21 +163,8 @@ async function coletar() {
       const descricao = limparTexto(item.contentSnippet || item.content || item.summary);
       const textoParaFiltro = `${tituloBruto} ${descricao}`;
 
-      // Prefere o <source> do feed; so recorre a cortar o titulo quando ele
-      // nao vem, que e o caso de alguns agregadores.
-      const veiculoDeclarado = veiculoDoItem(item);
-      let titulo = tituloBruto;
-      let veiculo = feed.nome;
-
-      if (feed.tipoDeTitulo === 'com-sufixo-do-veiculo') {
-        if (veiculoDeclarado) {
-          veiculo = veiculoDeclarado;
-          const sufixo = ` - ${veiculoDeclarado}`;
-          if (titulo.endsWith(sufixo)) titulo = titulo.slice(0, -sufixo.length).trim();
-        } else {
-          ({ titulo, veiculo } = separarTituloEVeiculo(tituloBruto, feed.nome));
-        }
-      }
+      const titulo = tituloBruto;
+      const veiculo = feed.nome;
 
       if (!titulo || !item.link) continue;
 
@@ -202,6 +213,82 @@ async function coletar() {
 }
 
 /**
+ * Procura a capa da materia, tentando mais de um lugar.
+ *
+ * A og:image e a primeira opcao porque e a que o veiculo escolheu para o
+ * preview de link. Nem todo site publica: alguns so tem a variante do Twitter,
+ * outros so a tag antiga image_src, e ha os que nao declaram nada e sobra
+ * procurar a maior imagem dentro do corpo da materia.
+ */
+function acharCapa(html, urlDaPagina) {
+  const daMeta = (prop) => {
+    const padroes = [
+      new RegExp(`<meta[^>]+(?:property|name)=["']${prop}["'][^>]*content=["']([^"']{5,})`, 'i'),
+      new RegExp(`<meta[^>]+content=["']([^"']{5,})["'][^>]*(?:property|name)=["']${prop}["']`, 'i'),
+    ];
+    for (const p of padroes) {
+      const m = html.match(p);
+      if (m) return m[1].trim();
+    }
+    return null;
+  };
+
+  const candidatos = [
+    daMeta('og:image'),
+    daMeta('og:image:secure_url'),
+    daMeta('twitter:image'),
+    daMeta('twitter:image:src'),
+    /<link[^>]+rel=["']image_src["'][^>]*href=["']([^"']+)/i.exec(html)?.[1],
+    primeiraImagemDoCorpo(html),
+  ];
+
+  for (const bruto of candidatos) {
+    if (!bruto) continue;
+    const absoluta = paraAbsoluta(bruto.trim(), urlDaPagina);
+    // Icone, logo e pixel de rastreio aparecem como <img> no corpo e nao
+    // servem de capa: viram um quadradinho esticado no topo da noticia.
+    if (absoluta && !/sprite|logo|icon|avatar|placeholder|pixel|1x1|blank/i.test(absoluta)) {
+      return absoluta;
+    }
+  }
+  return null;
+}
+
+/** Endereco de imagem costuma vir relativo ("/media/foto.jpg"). */
+function paraAbsoluta(endereco, urlDaPagina) {
+  try {
+    const u = new URL(endereco, urlDaPagina);
+    return u.protocol === 'http:' || u.protocol === 'https:' ? u.href : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Ultima tentativa: a maior imagem declarada no corpo da materia.
+ *
+ * "Maior" pela largura declarada no atributo, quando existe. Sem isso a
+ * escolha cairia na primeira <img> da pagina, que costuma ser o logo do site.
+ */
+function primeiraImagemDoCorpo(html) {
+  const corpo = /<article[\s\S]*?<\/article>/i.exec(html)?.[0] || html;
+  let melhor = null;
+  let maiorLargura = 0;
+  for (const m of corpo.matchAll(/<img[^>]+>/gi)) {
+    const tag = m[0];
+    const src = /(?:^|\s)src=["']([^"']+)/i.exec(tag)?.[1];
+    if (!src || src.startsWith('data:')) continue;
+    const largura = Number(/\swidth=["']?(\d+)/i.exec(tag)?.[1] || 0);
+    if (!melhor || largura > maiorLargura) {
+      melhor = src;
+      maiorLargura = largura;
+    }
+  }
+  // Imagem pequena declarada e quase sempre icone.
+  return maiorLargura > 0 && maiorLargura < 200 ? null : melhor;
+}
+
+/**
  * Busca og:image e og:description na pagina da noticia.
  *
  * Sao metatags que o proprio veiculo publica para preview de link, entao ler
@@ -212,15 +299,11 @@ async function coletar() {
  * generica do proprio Google.
  */
 async function buscarPreview(url) {
-  if (url.includes('news.google.com')) return {};
   try {
     const resposta = await fetch(url, {
       redirect: 'follow',
       signal: AbortSignal.timeout(15000),
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
-      },
+      headers: { 'User-Agent': NAVEGADOR },
     });
     if (!resposta.ok) return {};
     const html = (await resposta.text()).slice(0, 400000);
@@ -237,12 +320,10 @@ async function buscarPreview(url) {
       return null;
     };
 
-    const imagem = meta('og:image');
     return {
-      imagem: imagem && imagem.startsWith('http') ? imagem : null,
+      imagem: acharCapa(html, url),
       resumo: meta('og:description') || meta('description'),
-      // Guardado para a IA resumir. So existe quando o link e direto: com o
-      // redirect do Google nem chegamos na materia.
+      // Guardado para a IA resumir.
       texto: extrairTexto(html),
     };
   } catch {
@@ -336,20 +417,77 @@ async function publicar(db, noticias) {
   console.log(`\nPublicado: ${noticias.length} noticias (${removidos} anteriores removidas).`);
 }
 
+/**
+ * Ordena da mais recente para a mais antiga e aplica a janela de dias.
+ *
+ * A janela nao e um corte seco: se o que saiu nos ultimos JANELA_EM_DIAS dias
+ * nao chega ao minimo, a lista completa com as mais recentes que ficaram de
+ * fora. Assim uma semana quieta nas fontes nao esvazia a aba, e a ordem
+ * continua sendo da mais nova para a mais velha em qualquer caso.
+ */
+function porRecencia(lista) {
+  const ordenada = [...lista].sort((a, b) => b.data - a.data);
+  const limiteDaJanela = Date.now() - JANELA_EM_DIAS * 86400000;
+
+  const dentroDaJanela = ordenada.filter((n) => n.data.getTime() >= limiteDaJanela);
+  if (dentroDaJanela.length >= MINIMO_DE_NOTICIAS) return dentroDaJanela;
+
+  const completando = ordenada.filter((n) => n.data.getTime() < limiteDaJanela);
+  const faltam = MINIMO_DE_NOTICIAS - dentroDaJanela.length;
+  if (completando.length > 0) {
+    console.log(
+      `  Janela de ${JANELA_EM_DIAS} dias rendeu ${dentroDaJanela.length}; ` +
+        `completando com ate ${faltam} mais antigas.`,
+    );
+  }
+  return [...dentroDaJanela, ...completando.slice(0, faltam)];
+}
+
 async function main() {
   console.log(SIMULAR ? '=== SIMULACAO (nada sera escrito) ===\n' : '=== Publicando no Firestore ===\n');
 
   const { aprovados, descartados } = await coletar();
-  const noticias = removerDuplicatas(aprovados)
-    .sort((a, b) => b.data - a.data)
+  // Folga proposital sobre o limite: parte das candidatas cai no passo
+  // seguinte, quando descobrimos que a pagina nao abriu. Sem a folga a lista
+  // publicada ficaria menor que o limite toda vez que um site saisse do ar.
+  const FOLGA = 10;
+  const candidatas = porRecencia(removerDuplicatas(aprovados))
+    .slice(0, LIMITE_DE_NOTICIAS + FOLGA);
+
+  console.log(`
+${aprovados.length} aprovados, ${descartados.length} descartados, ${candidatas.length} candidatas apos deduplicar.
+`);
+
+  // So agora busca o preview, e apenas das candidatas: enriquecer todas as
+  // aprovadas seria desperdicio de requisicao.
+  console.log('Buscando capa e resumo nas paginas...');
+  const previewsBrutos = await Promise.all(candidatas.map((n) => buscarPreview(n.link)));
+
+  // Descarta o que nao da para ler.
+  //
+  // Noticia sem nada para ler no app e so um titulo: abrir nao entrega nada e
+  // o unico caminho e sair para o navegador. Melhor nao publicar. Basta ter
+  // texto de materia (que a IA resume) ou o resumo do proprio veiculo.
+  let ilegiveis = 0;
+  const pares = candidatas
+    .map((noticia, i) => ({ noticia, preview: previewsBrutos[i] || {} }))
+    .filter(({ noticia, preview }) => {
+      const temTexto = Boolean(preview.texto && preview.texto.length >= 400);
+      const temResumoDoVeiculo = Boolean(
+        preview.resumo && !ehSoOTituloRepetido(preview.resumo, noticia.titulo),
+      );
+      if (temTexto || temResumoDoVeiculo || noticia.descricao) return true;
+      ilegiveis++;
+      return false;
+    })
     .slice(0, LIMITE_DE_NOTICIAS);
 
-  console.log(`\n${aprovados.length} aprovados, ${descartados.length} descartados, ${noticias.length} publicaveis apos deduplicar.\n`);
+  const noticias = pares.map((par) => par.noticia);
+  const previews = pares.map((par) => par.preview);
+  if (ilegiveis > 0) {
+    console.log(`  ${ilegiveis} descartadas por nao ter materia legivel.`);
+  }
 
-  // So agora busca o preview, e apenas das que serao publicadas: enriquecer as
-  // 45 aprovadas seria desperdicio de requisicao.
-  console.log('Buscando capa e resumo nas paginas...');
-  const previews = await Promise.all(noticias.map((n) => buscarPreview(n.link)));
   let comCapa = 0;
   let resumoRecuperado = 0;
   noticias.forEach((n, i) => {
@@ -360,7 +498,8 @@ async function main() {
       resumoRecuperado++;
     }
   });
-  console.log(`  ${comCapa} com imagem de capa, ${resumoRecuperado} resumos recuperados da pagina.\n`);
+  console.log(`  ${comCapa} de ${noticias.length} com imagem de capa, ${resumoRecuperado} resumos recuperados da pagina.
+`);
 
   // Conecta antes da IA para reaproveitar resumo ja gerado.
   const db = SIMULAR ? null : await conectar();
@@ -419,14 +558,18 @@ async function main() {
     console.log('GROQ_API_KEY nao definida: seguindo sem resumo por IA.\n');
   }
 
-  // Sem resumo em lugar nenhum, o veiculo ao menos diz de onde veio.
-  for (const n of noticias) {
-    if (!n.descricao) n.descricao = n.autor;
+  // Rede de seguranca. Antes daqui a noticia ficava com o nome do veiculo no
+  // lugar do resumo, o que so enchia linguica: agora ela sai da lista, pela
+  // mesma razao das ilegiveis.
+  const semResumo = noticias.filter((n) => !n.descricao || !n.descricao.trim());
+  if (semResumo.length > 0) {
+    console.log(`  ${semResumo.length} descartadas por ficar sem resumo.`);
   }
+  const publicaveis = noticias.filter((n) => n.descricao && n.descricao.trim());
 
   if (SIMULAR) {
     console.log('--- SERIAM PUBLICADAS ---');
-    noticias.forEach((n, i) => {
+    publicaveis.forEach((n, i) => {
       console.log(`${String(i + 1).padStart(2)}. [${n.autor}] ${n.titulo}`);
       // A descricao aparece como subtitulo na lista do app, entao vale
       // conferir aqui se ela agrega algo ou so repete o titulo.
@@ -442,14 +585,18 @@ async function main() {
     return;
   }
 
-  if (noticias.length === 0) {
+  if (publicaveis.length === 0) {
     console.error('Nenhuma noticia aprovada. Abortando para nao esvaziar o app.');
     process.exit(1);
   }
-  await publicar(db, noticias);
+  await publicar(db, publicaveis);
 }
 
-main().catch((erro) => {
-  console.error('Falhou:', erro);
-  process.exit(1);
-});
+// So roda quando chamado direto. Importado - pelo teste da curadoria - o
+// arquivo apenas expoe os filtros, sem sair buscando feed.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((erro) => {
+    console.error('Falhou:', erro);
+    process.exit(1);
+  });
+}
